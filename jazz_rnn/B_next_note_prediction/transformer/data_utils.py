@@ -91,7 +91,7 @@ class LMOrderedIterator(object):
 
 
 class JazzCorpus:
-    def __init__(self, pkl_path, transpose=True):
+    def __init__(self, pkl_path, transpose=True): #pkl_path is ./results/dataset_pkls/
         with open(os.path.join(pkl_path, 'converter_and_duration.pkl'), 'rb') as input_conv:
             self.converter = pickle.load(input_conv)
 
@@ -100,10 +100,11 @@ class JazzCorpus:
         with open(os.path.join(pkl_path, 'val.pkl'), 'rb') as input_val:
             val_data = pickle.load(input_val)
 
-        self.transpose = transpose
+        self.transpose = transpose #transpose is true, so we will transpose
 
         def npdict_2_np(data):
-            return np.concatenate([v for k, v in data.items()], axis=0)
+            #return np.concatenate([v for k, v in data.items()], axis=0)
+            return np.concatenate([np.array(s) for s in data], axis=0)
 
         train_data = npdict_2_np(train_data)
         val_data = npdict_2_np(val_data)

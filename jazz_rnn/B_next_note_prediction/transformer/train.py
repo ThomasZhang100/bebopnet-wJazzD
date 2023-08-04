@@ -86,7 +86,7 @@ def update_dropatt(m, args):
         m.dropatt.p = args.dropatt
 
 
-class Trainer:
+class Trainer: #2 
     def __init__(self, in_args):
         if not hasattr(self, 'model_class'):
             self.model_class = MemTransformerLM
@@ -95,9 +95,9 @@ class Trainer:
         self.seed()
 
         self.device = torch.device('cuda' if self.args.cuda else 'cpu')
-        self.load_data()
-        self.build_model()
-        self.init_optimizer()
+        self.load_data() # loads data
+        self.build_model() #initializes pytorch model from memtransformer 
+        self.init_optimizer() #initializes adam pytorch optimizer 
         self.best_val_loss = 1e6
         self.best_val_p_acc = 0
         self.best_val_d_acc = 0
@@ -253,10 +253,11 @@ class Trainer:
     def update_args_defaults(self, parser):
         pass
 
-    def load_data(self):
-        self.corpus = JazzCorpus(self.args.data_pkl, transpose=True)
+    def load_data(self): #3
+        self.corpus = JazzCorpus(self.args.data_pkl, transpose=True) #< goes to data_util
 
         # eval_batch_size = 10
+        #get_batch() in the LMOrderedIterator is where the chord shifting happens
         self.tr_iter = self.corpus.get_iterator('train', self.args.batch_size, self.args.tgt_len,
                                                 device=self.device, ext_len=self.args.ext_len)
         self.va_iter = self.corpus.get_iterator('val', self.args.batch_size, self.args.eval_tgt_len,
@@ -268,20 +269,24 @@ class Trainer:
                         'd_head': args.d_head, 'd_inner': args.d_inner, 'dropout': args.dropout,
                         'dropatt': args.dropatt, 'tie_weight': args.tied, 'd_embed': args.d_embed,
                         'pre_lnorm': args.pre_lnorm,
-                        'tgt_len': args.tgt_len, 'ext_len': args.ext_len, 'mem_len': args.mem_len,
-                        'clamp_len': args.clamp_len,
-                        'pitch_sizes': (130, args.pitch_emsize),
+                        'tgt_len': args.tgt_len , 'ext_len': args.ext_len, 'mem_len': args.mem_len, #64,0,64 respectively in args.json
+                        'clamp_len': args.clamp_len, #-1
+                        'pitch_sizes': (64, args.pitch_emsize), #including eos 
                         'duration_sizes': (self.corpus.converter.max_durations(), args.dur_emsize),
                         'offset_sizes': (48, args.offset_emsize),
                         'converter': self.corpus.converter,
                         'chord_bias': args.chord_bias,
                         }
 
+        #above arguments are used instead of args.json
+
         if args.restart:
+            #loads json args from args.json
             with open(os.path.join(args.restart_dir, 'args.json'), 'rb') as f:
                 saved_model_kwargs = json.load(f)
             for k, v in saved_model_kwargs.items():
                 model_kwargs[k] = v
+
             self.model = self.model_class(**model_kwargs)
             with open(os.path.join(args.restart_dir, 'model.pt'), 'rb') as f:
                 self.model.load_state_dict(torch.load(f), strict=False)
@@ -289,7 +294,7 @@ class Trainer:
             self.model.apply(update_dropout_partial)
             self.model.apply(update_dropout_partial)
         else:
-            self.model = self.model_class(**model_kwargs)
+            self.model = self.model_class(**model_kwargs) #initializes model object into self.model
             weights_init_partial = partial(weights_init, args=self.args)
             self.model.apply(weights_init_partial)
             self.model.encode_pitch.apply(
@@ -308,7 +313,7 @@ class Trainer:
         shutil.copy(os.path.join(args.config),
                     os.path.join(args.work_dir, os.path.basename(args.config)))
 
-        args.n_all_param = sum([p.nelement() for p in self.model.parameters()])
+        args.n_all_param = sum([p.nelement() for p in self.model.parameters()]) #total # of parameters
         args.n_nonemb_param = sum([p.nelement() for p in self.model.layers.parameters()])
 
         self.para_model = self.model.to(self.device)
@@ -320,7 +325,7 @@ class Trainer:
         self.logging('#params = {}'.format(args.n_all_param))
         self.logging('#non emb params = {}'.format(args.n_nonemb_param))
 
-    def init_optimizer(self):
+    def init_optimizer(self): #initializes pytorch optimizer (Default is adam)
         args = self.args
         model = self.model
         if args.optim.lower() == 'sgd':
@@ -512,7 +517,7 @@ class Trainer:
             if self.train_step == self.args.max_step:
                 break
 
-    def main(self):
+    def main(self): #training 
         self.train_step = 0
         self.best_val_loss = None
         self.best_val_p_acc = 0
@@ -520,7 +525,7 @@ class Trainer:
 
         # At any point you can hit Ctrl + C to break out of training early.
         try:
-            for epoch in itertools.count(start=1):
+            for epoch in itertools.count(start=1):#training loop 
                 self.train(epoch)
                 if self.train_step == self.args.max_step:
                     self.logging('-' * 100)
@@ -538,5 +543,5 @@ class Trainer:
 
 
 if __name__ == '__main__':
-    trainer = Trainer(sys.argv[1:])
+    trainer = Trainer(sys.argv[1:]) #1
     trainer.main()

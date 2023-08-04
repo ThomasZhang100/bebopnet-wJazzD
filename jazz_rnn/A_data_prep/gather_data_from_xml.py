@@ -21,8 +21,8 @@ from jazz_rnn.C_reward_induction.online_tagger_gauge import SongLabels
 # [4:17]  13 ints - scale pitches - indicators of participating pitches
 # [18:31] 13 ints - chord pitches - indicators of participating pitches
 # [31]      1 int  - chord idx - type of chord (Major, minor...)
-REST_SYMBOL = 128
-EOS_SYMBOL = 129
+REST_SYMBOL = 62 #128
+EOS_SYMBOL = 63 #129
 EOS_VECTOR = [EOS_SYMBOL] + [0] * 30
 EOS_REWARD_VECTOR = [EOS_SYMBOL] + [0] * 31
 LEGAL_DENOMINATORS = [1, 2, 3, 4, 6]
@@ -132,10 +132,10 @@ def extract_data_from_xml(args):
     os.makedirs(args.out_dir, exist_ok=True)
     print('saving results to {}'.format(args.out_dir))
 
-    with open(os.path.join(args.out_dir, 'converter_and_duration.pkl'), 'wb') as fp:
+    with open(os.path.join(args.out_dir, 'converter_and_duration.pkl'), 'wb') as fp: #'results/dataset_pkls/converter_and_duration.pkl'
         pickle.dump(converter, fp)
         pickle.dump(durations, fp)
-    with open(os.path.join(args.out_dir, 'train.pkl'), 'wb') as fp:
+    with open(os.path.join(args.out_dir, 'train.pkl'), 'wb') as fp: #'results/dataset_pkls/train.pkl'
         pickle.dump(train_data, fp)
     if not args.no_test:
         with open(os.path.join(args.out_dir, 'val.pkl'), 'wb') as fp:
@@ -337,7 +337,6 @@ def extract_vectors(song, ri, song_labels_dict, converter, no_eos=False):
                 if not isinstance(n, m21.harmony.ChordSymbol):
                     n = m21.harmony.ChordSymbol(n.pitches[0].name)
                 current_chord = n
-
                 _, _, _, chord_idx = chord_2_vec(current_chord, song=song)
                 assert chord_idx != NO_CHORD_IDX, str(song)
 

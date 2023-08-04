@@ -367,7 +367,7 @@ class MusicGenerator:
             total_offset[cross_end_bar] = total_offset[cross_end_bar] - residual_duration_m21
         duration_in_measure_for_debug = duration_in_measure_for_debug + new_dur_m21
         # create new note for the network for next generation
-        last_note_in_measure_mask = torch.as_tensor((end_at_end_bar | cross_end_bar_mask).astype(np.long),
+        last_note_in_measure_mask = torch.as_tensor((end_at_end_bar | cross_end_bar_mask).astype(np.int64),
                                                     dtype=torch.long, device=self.device)
         next_chord = [self.chords[measure_idx % self.head_len][c] if last_note_in_measure_mask[ind] == 0 else
                       self.chords[(measure_idx + 1) % self.head_len][0] for ind, c in
@@ -399,7 +399,7 @@ class MusicGenerator:
             else:
                 raise ValueError('number of notes in head ({}) is smaller than the memory size ({}). '
                                  'decrease memory size'.format(hidden[0].shape[0], self.model.mem_len))
-        measure_done[torch.as_tensor((end_at_end_bar | cross_end_bar_mask).astype(np.long), dtype=torch.long,
+        measure_done[torch.as_tensor((end_at_end_bar | cross_end_bar_mask).astype(np.int64), dtype=torch.long,
                                      device=self.device).nonzero()] = 1
         measure_not_done = 1 - measure_done
         all_workers_done = measure_done.all()

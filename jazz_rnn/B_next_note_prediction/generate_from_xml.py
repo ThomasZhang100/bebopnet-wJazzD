@@ -121,7 +121,10 @@ def generate_from_xml(args):
         with open(os.path.join(args.model_dir, args.checkpoint), 'rb') as f:
             model = MemTransformerLM(**kwargs)
             model_path = os.path.join(args.model_dir, args.checkpoint)
-            model.load_state_dict(torch.load(model_path))
+            if args.cuda:
+                model.load_state_dict(torch.load(model_path))
+            else:
+                model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
         model.converter = converter
     else:
         with open(os.path.join(args.model_dir, args.checkpoint), 'rb') as f:

@@ -7,9 +7,9 @@ import torch.nn.functional as F
 sys.path.append('utils')
 from jazz_rnn.utilspy.meters import accuracy
 from jazz_rnn.utils.music.vectorXmlConverter import input_2_groups
-from jazz_rnn.A_data_prep.gather_data_from_xml import EOS_SYMBOL
+from jazz_rnn.A_data_prep.gather_data_from_xml import EOS_SYMBOL #EOS SYMBOL MUST E CHANGED 
 
-OFFSET_TO_5OCT = 72
+OFFSET_TO_5OCT = 60 - 36 #72 - 36 
 
 
 class PositionalEmbedding(nn.Module):
@@ -616,7 +616,7 @@ class MemTransformerLM(nn.Module):
 
         # eos has no chord, so we need to mask it out
         eos_mask = eos_mask.view(-1)
-        eos_mask = 1 - eos_mask
+        eos_mask = ~eos_mask
         chord_pitches = chord_pitches.view(-1, 13)
         chord_pitch_idxs_no_eos = chord_pitches.nonzero()[:, 1] + OFFSET_TO_5OCT
         chord_pitch_idxs = torch.zeros(shape[0] * shape[1], 4, device=chord_pitches.device, dtype=chord_pitches.dtype)
