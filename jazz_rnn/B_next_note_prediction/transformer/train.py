@@ -88,11 +88,17 @@ def update_dropatt(m, args):
 
 class Trainer: #2 
     def __init__(self, in_args):
+        print("init")
         if not hasattr(self, 'model_class'):
             self.model_class = MemTransformerLM
+
         self.parse_args(in_args)
+
+        print("init2")
         self.setup_logging()
         self.seed()
+
+        
 
         self.device = torch.device('cuda' if self.args.cuda else 'cpu')
         self.load_data() # loads data
@@ -245,8 +251,8 @@ class Trainer: #2
         assert self.args.ext_len >= 0, 'extended context length must be non-negative'
 
         if self.args.save_name:
-            self.args.work_dir = os.path.join(self.args.work_dir,
-                                              self.args.save_name + '_' + time.strftime('%Y%m%d-%H%M%S'))
+            self.args.work_dir = os.path.join(self.args.work_dir, 
+                                              self.args.save_name + '_' + time.strftime('%Y%m%d-%H%M%S')) # creates a new model results directory where converter, args, model will be stored 
         else:
             self.args.work_dir = os.path.join(self.args.work_dir, time.strftime('%Y%m%d-%H%M%S'))
 
@@ -279,7 +285,7 @@ class Trainer: #2
                         }
 
         #above arguments are used instead of args.json
-
+        print(args.restart)
         if args.restart:
             #loads json args from args.json
             with open(os.path.join(args.restart_dir, 'args.json'), 'rb') as f:
@@ -526,7 +532,7 @@ class Trainer: #2
         # At any point you can hit Ctrl + C to break out of training early.
         try:
             for epoch in itertools.count(start=1):#training loop 
-                self.train(epoch)
+                self.train(epoch) # THIS IS THE EPOCH TRAINING STEP 
                 if self.train_step == self.args.max_step:
                     self.logging('-' * 100)
                     self.logging('End of training')
@@ -543,5 +549,7 @@ class Trainer: #2
 
 
 if __name__ == '__main__':
+    print("hello?")
     trainer = Trainer(sys.argv[1:]) #1
+    print("hello?1")
     trainer.main()

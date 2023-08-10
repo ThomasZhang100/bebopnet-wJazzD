@@ -28,18 +28,18 @@ class AverageMeter(object):
 
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
-    maxk = max(topk)
+    maxk = max(topk)# = 5
     batch_size = target.size(0)
 
-    _, pred = output.topk(maxk, 1, True, True)
-    pred = pred.t().type_as(target)
-    correct = pred.eq(target.view(1, -1).expand_as(pred))
-
+    _, pred = output.topk(maxk, 1, True, True) #ouput is pitch or duration logits but all sequences are concatenated. ,this gets the idx of the 5 largest logits for each prediction, sorted by largest to smallest 
+    pred = pred.t().type_as(target) # dim = (5,lengthofconcatenatedsequence)
+    correct = pred.eq(target.view(1, -1).expand_as(pred)) #target was (lengthofconcatenatedsequence, 1), now (1, lengthofconcatenatedsequence), expanded to (5, lengthofconcatenatedsequence) target contains the pitch or duration idx of the sequences
+    #^^^ gets boolean tensor seeing which of the 5 best predictions are correct for each element
     res = []
     for k in topk:
-        correct_k = correct[:k].view(-1).float().sum(0)
-        res.append(correct_k.mul_(100.0 / batch_size))
-    return res
+        correct_k = correct[:k].reshape(-1).float().sum(0)
+        res.append(correct_k.mul_(100.0 / batch_size)) #appends the percentage of elements in the batch whose top 3 predictions contain the target
+    return res # res = [<percent correct in top 1 precictions>, <percent correct in top 3 precictions>, <percent correct in top 5 precictions>]
 
 
 def per_class_accuracy(output, target, n_classes):

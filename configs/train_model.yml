@@ -14,6 +14,5 @@ save_name: model
 tgt_len: 64
 eval_tgt_len: 64
 mem_len: 64
-fp16: True
 optim: ranger
 max_step: 500000

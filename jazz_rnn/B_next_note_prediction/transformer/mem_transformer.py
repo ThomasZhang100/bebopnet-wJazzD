@@ -227,7 +227,7 @@ class RelMultiHeadAttn(nn.Module):
         self.pre_lnorm = pre_lnorm
 
     def _parallelogram_mask(self, h, w, left=False):
-        mask = torch.ones((h, w)).byte()
+        mask = torch.ones((h, w)).bool() #CHANGED TO bool() 
         m = min(h, w)
         mask[:m, :m] = torch.triu(mask[:m, :m])
         mask[-m:, -m:] = torch.tril(mask[-m:, -m:])
@@ -541,8 +541,8 @@ class MemTransformerLM(nn.Module):
 
         mlen = mems[0].size(0) if mems is not None else 0
         klen = mlen + qlen
-        dec_attn_mask = torch.triu(
-            word_emb.new_ones(qlen, klen), diagonal=1 + mlen).byte()[:, :, None]
+        dec_attn_mask = torch.triu( #HERE IS THE ATTENTION MASK (changed to .bool() from .byte())
+            word_emb.new_ones(qlen, klen), diagonal=1 + mlen).bool()[:, :, None]
         dec_attn_mask = dec_attn_mask.unsqueeze(-1).expand(qlen, klen, bsz, 1)
         for b, seq_idx in ios_mask:
             dec_attn_mask[seq_idx:, :seq_idx, b, :] = 1
@@ -581,7 +581,7 @@ class MemTransformerLM(nn.Module):
 
         pitch_logits = decoded_pitch[-tgt_len:]
         duration_logits = decoded_duration[-tgt_len:]
-        pitch_logits = pitch_logits.view(-1, pitch_logits.shape[-1])
+        pitch_logits = pitch_logits.view(-1, pitch_logits.shape[-1]) #concatenates all sequences together
         duration_logits = duration_logits.view(-1, duration_logits.shape[-1])
         pitch_loss = self.crit(pitch_logits, target[:, :, 0].view(-1))
         duration_loss = self.crit(duration_logits, target[:, :, 1].view(-1))
@@ -589,14 +589,14 @@ class MemTransformerLM(nn.Module):
         qlen, bsz, _ = data.size()
         pitch_probs = F.softmax(pitch_logits, -1)
 
-        nll_loss = pitch_loss + duration_loss
+        nll_loss = pitch_loss + duration_loss #PITCH AND DURATION LOSS IS ADDED 
 
         loss = nll_loss
 
         pitch_entropy = torch.distributions.categorical.Categorical(logits=pitch_probs).entropy().mean()
         duration_entropy = torch.distributions.categorical.Categorical(logits=duration_logits).entropy().mean()
         total_entropy = pitch_entropy + duration_entropy
-        pitch_top1, pitch_top3, pitch_top5 = accuracy(pitch_logits, target.view(-1, 31)[:, 0].contiguous(),
+        pitch_top1, pitch_top3, pitch_top5 = accuracy(pitch_logits, target.view(-1, 31)[:, 0].contiguous(), #target is the raw untrimmed data and can be viewed this way (31)
                                                       topk=(1, 3, 5))
         duration_top1, duration_top3 = accuracy(duration_logits, target.view(-1, 31)[:, 1].contiguous(), topk=(1, 3))
 

@@ -62,7 +62,8 @@ class LMOrderedIterator(object):
         # The note before EOS should not take the eos chord, rather should maintain its own.
         # Likewise, the EOS note, should maintain his zero vector for a chord
         eos_mask = self.data[beg_idx:end_idx + 1, :, 0] == EOS_SYMBOL
-        eos_mask[:-1] += eos_mask[1:]
+        eos_mask_copy = eos_mask.clone()
+        eos_mask[:-1] = eos_mask_copy[:-1] + eos_mask[1:]
         eos_mask = eos_mask[:-1]
         eos_mask_expanded = eos_mask.unsqueeze(-1).expand(-1, -1, d_data - 3)
         data[:, :, 3:][eos_mask_expanded] = self.data[beg_idx:end_idx][:, :, 3:][eos_mask_expanded]
