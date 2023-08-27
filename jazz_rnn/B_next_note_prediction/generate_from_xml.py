@@ -1,3 +1,5 @@
+#python jazz_rnn/B_next_note_prediction/generate_from_xml.py --model_dir "results/training_results/transformer/model_20230821-094938" --checkpoint 'model.pt'
+
 import datetime
 import json
 import argparse
@@ -17,7 +19,7 @@ from jazz_rnn.B_next_note_prediction.generation_utils import song_params_dict, p
 from jazz_rnn.B_next_note_prediction.music_generator import MusicGenerator
 from jazz_rnn.utils.music_utils import notes_to_stream, notes_to_swing_notes
 from jazz_rnn.B_next_note_prediction.transformer.mem_transformer import MemTransformerLM
-
+from jazz_rnn.A_data_prep.durationpitch import minPitch
 
 def generate_from_xml(args):
     parser = argparse.ArgumentParser(description='PyTorch Jazz Language Model')
@@ -31,8 +33,8 @@ def generate_from_xml(args):
 
     input_parser = parser.add_argument_group('Input Parameters')
     input_parser.add_argument('--model_dir', type=str,
-                              help='model and converter(pickled data corpus) directory to use')
-    input_parser.add_argument('--checkpoint', type=str,
+                              help='model and converter(pickled data corpus) directory to use') # THERE IS NO DEFAULT, MUST SPECIFY WHEN RUNNING. PRETRAINED MODEEL IS IN training_results. Our models are saved in results/training_results/transformer/modeldir
+    input_parser.add_argument('--checkpoint', type=str, #MUST SPECIFIY pt filename of THE MODEL 
                               default='model.pt',
                               help='model checkpoint to use in model_dir')
     input_parser.add_argument('--score_model', type=str,
@@ -69,7 +71,7 @@ def generate_from_xml(args):
                                    help='temperature - higher will increase diversity')
     generation_parser.add_argument('--num_measures', type=int, default=64,
                                    help='number of measures to generate')
-    generation_parser.add_argument('--num_heads', type=int, default=1,
+    generation_parser.add_argument('--num_heads', type=int, default=1, #NUMBER OF CHORUSES TO GENERATE, MUST SPECIFY IN COMMAND
                                    help='number of heads to generate (if not 0, overrides num_measures)')
     generation_parser.add_argument('--batch_size', type=int, default=2,
                                    help='number of parallel generation for every measure')
@@ -96,22 +98,22 @@ def generate_from_xml(args):
 
     set_rnd_seed(args)
 
-    set_args_by_song_name(args, gen_time)
+    set_args_by_song_name(args, gen_time) #GETS LOCATION OF XML FILES AND BACKING TRACKS FROM DICTIONARY IN generation_utils.py XMLS include melody and chord changes of the head, also puts the save directory into args.outf 
     args.remove_head_from_mp3 = args.remove_head_from_mp3 or (
             args.back_track.split('/')[-1] in pop_bt2silence.keys())
 
-    if args.xml_ != '':
+    if args.xml_ != '': #default is ''
         args.xml = args.xml_
 
     args.verbose_ext = ' 2>/dev/null'
     if args.verbose:
         args.verbose_ext = ''
 
-    converter_path = os.path.join(args.model_dir, 'converter_and_duration.pkl')
+    converter_path = os.path.join(args.model_dir, 'converter_and_duration.pkl') # DURATION CONVERTER OBJECT
     with open(converter_path, 'rb') as input_file:
         converter = pickle.load(input_file)
 
-    # generate model
+    # generate model from specified file
     is_transformer = len(glob.glob(os.path.join(args.model_dir, 'scripts', 'mem_transformer.py'))) != 0
     if is_transformer:
         with open(os.path.join(args.model_dir, 'args.json'), 'r') as f_params:
@@ -138,7 +140,9 @@ def generate_from_xml(args):
 
     model.eval()
 
-    generator = MusicGenerator(model, converter, batch_size=args.batch_size,
+
+    #ARGS.SONG is a string which corresponds to the songdict in generation_utils
+    generator = MusicGenerator(model, converter, batch_size=args.batch_size, #Batch_size is number of concurrent generations
                                beam_search=args.beam_search,
                                beam_width=args.beam_width,
                                beam_depth=args.beam_depth,
@@ -148,12 +152,19 @@ def generate_from_xml(args):
                                score_model=args.score_model, threshold=args.threshold,
                                ensemble=True, song=args.song, no_head=args.remove_head_from_mp3)
 
+    print("initialized generator")
     generator.init_stream(args.xml)
-
-    if args.num_heads != 0:
+    print("initialized stream")
+    if args.num_heads != 0: #number of choruses to generate MUST BE SPECIFIED IN COMMAND LINE 
         args.num_measures = args.num_heads * generator.head_len
 
-    notes, top_likelihood = generator.generate_measures(args.num_measures)
+    notes, top_likelihood = generator.generate_measures(args.num_measures) #generates the best sequence using the model 
+
+    for n in notes[:, 0, :]:
+        print("note:", n)
+
+
+    print("generated measures")
 
     os.makedirs(args.save_dir, exist_ok=True)
 
@@ -168,12 +179,12 @@ def generate_from_xml(args):
         else:
             args.outf = '{}_likelihood_{:.2f}'.format(args.outf, np.abs(top_likelihood))
 
-    notes_swing = notes_to_swing_notes(notes[:, 0, :])
+    #notes_swing = notes_to_swing_notes(notes[:, 0, :])
 
     stream = notes_to_stream(notes[:, 0, :], generator.stream, generator.chords, generator.head_len,
                              args.remove_head_from_mp3, head_early_start=generator.early_start)
-    stream_swing = notes_to_stream(notes_swing, generator.stream, generator.chords, generator.head_len,
-                                   args.remove_head_from_mp3, head_early_start=generator.early_start)
+    #stream_swing = notes_to_stream(notes_swing, generator.stream, generator.chords, generator.head_len,
+                                   #args.remove_head_from_mp3, head_early_start=generator.early_start)
     if not args.remove_head_from_mp3:
         stream_no_head = notes_to_stream(notes[:, 0, :], generator.stream, generator.chords, generator.head_len,
                                          remove_head=True, head_early_start=generator.early_start)
@@ -221,6 +232,7 @@ def generate_from_xml(args):
     generator.filename = args.outf
     generator.score = top_likelihood
 
+    '''
     # MP3 with swing
     args.outf = args.outf + '_swing'
     # Create output files:
@@ -230,7 +242,7 @@ def generate_from_xml(args):
     except m21.musicxml.m21ToXml.MusicXMLExportException:
         print('cannot create swing version')
         return generator
-
+    
     # remove chords from xml:
     os.system('cp ' + args.outf + '.xml ' + args.outf + '_with_chords.xml')
     with open(args.outf + '.xml', 'rb') as f:
@@ -246,11 +258,14 @@ def generate_from_xml(args):
     create_midi(args, music_stream_out)
     if args.create_mp3:
         create_mp3(args)
-
+    '''
+    
     return generator
 
 
 def create_midi(args, music_stream_out):
+    print("create_midi")
+    print("filepath:", args.outf + '.mid')
     mf = m21.midi.translate.streamToMidiFile(music_stream_out)
     mf.open(args.outf + '.mid', 'wb')
     mf.write()
@@ -259,31 +274,41 @@ def create_midi(args, music_stream_out):
 
 def create_mp3(args):
     # generate mp3 midi
+    print("create_mp3")
     os.system(
         ('timidity --preserve-silence {0}.mid -Ow -o -' + args.verbose_ext + ' | lame - -b 64 -h {0}_initial.mp3 >/dev/null 2>&1').format(
             args.outf))
+    print(('timidity --preserve-silence {0}.mid -Ow -o -' + args.verbose_ext + ' | lame - -b 64 -h {0}_initial.mp3 >/dev/null 2>&1').format(
+            args.outf))
 
     if args.back_track.split('/')[-1] in pop_bt2silence.keys():
+        print('if')
         # add silence to despacito and increase volume
         silence = pop_bt2silence[args.back_track.split('/')[-1]]
         # increase volume
         os.system('sox -v 5 {o}_initial.mp3 {o}_n.mp3 rate 48k'.format(o=args.outf) + args.verbose_ext)
+        print('sox -v 5 {o}_initial.mp3 {o}_n.mp3 rate 48k'.format(o=args.outf) + args.verbose_ext)
         os.system('sox {0} {1}_n.mp3 {1}_notes.mp3 rate 48k'.format(silence, args.outf) + args.verbose_ext)
+        print('sox {0} {1}_n.mp3 {1}_notes.mp3 rate 48k'.format(silence, args.outf) + args.verbose_ext)
     else:
+        print('else')
         # increase volume
-        os.system('sox -v 4 {o}_initial.mp3 {o}_notes.mp3 rate 48k'.format(o=args.outf) + args.verbose_ext)
+        print('sox -v 4 {o}_initial.mp3 {o}_notes.mp3 rate 48k'.format(o=args.outf))# + args.verbose_ext)
+        os.system('sox -v 4 {o}_initial.mp3 {o}_notes.mp3 rate 48k'.format(o=args.outf))# + args.verbose_ext)
 
     # merge with backing track
-    os.system('sox -m {0}_notes.mp3 {1} {0}_full.mp3'.format(args.outf, args.back_track) + args.verbose_ext)
+    os.system('sox -m {0}_notes.mp3 {1} {0}_full.mp3'.format(args.outf, args.back_track))# + args.verbose_ext)
+    print('sox -m {0}_notes.mp3 {1} {0}_full.mp3'.format(args.outf, args.back_track))# + args.verbose_ext)
     # adjust volume
-    os.system('sox -v 1.5 {0}_full.mp3 {0}.mp3'.format(args.outf) + args.verbose_ext)
+    os.system('sox -v 1.5 {0}_full.mp3 {0}.mp3'.format(args.outf))# + args.verbose_ext)
+    print('sox -v 1.5 {0}_full.mp3 {0}.mp3'.format(args.outf))# + args.verbose_ext)
 
     time.sleep(1)
     # remove tmp files
     os.system('rm {0}_notes.mp3'.format(args.outf))
     os.system('rm {0}_initial.mp3'.format(args.outf))
     os.system('rm {0}_full.mp3'.format(args.outf))
-    os.system('rm {0}.mid'.format(args.outf))
+    #os.system('rm {0}.mid'.format(args.outf))
     if args.back_track.split('/')[-1] in pop_bt2silence:
         os.system('rm {0}_n.mp3'.format(args.outf))
 

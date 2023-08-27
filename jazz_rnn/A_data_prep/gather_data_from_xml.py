@@ -11,7 +11,7 @@ from fractions import Fraction
 
 import torch.multiprocessing as mp
 from jazz_rnn.utils.music.vectorXmlConverter import *
-from jazz_rnn.C_reward_induction.online_tagger_gauge import SongLabels
+#from jazz_rnn.C_reward_induction.online_tagger_gauge import SongLabels
 
 # A vector consists of:
 # [0]       1 int  - pitch can get value from 0 to 127
@@ -21,8 +21,9 @@ from jazz_rnn.C_reward_induction.online_tagger_gauge import SongLabels
 # [4:17]  13 ints - scale pitches - indicators of participating pitches
 # [18:31] 13 ints - chord pitches - indicators of participating pitches
 # [31]      1 int  - chord idx - type of chord (Major, minor...)
-REST_SYMBOL = 62 #128
-EOS_SYMBOL = 63 #129
+from jazz_rnn.A_data_prep.durationpitch import REST_SYMBOL #128
+from jazz_rnn.A_data_prep.durationpitch import EOS_SYMBOL, minPitch#129
+
 EOS_VECTOR = [EOS_SYMBOL] + [0] * 30
 EOS_REWARD_VECTOR = [EOS_SYMBOL] + [0] * 31
 LEGAL_DENOMINATORS = [1, 2, 3, 4, 6]
@@ -241,13 +242,16 @@ def get_all_durations(songs):
     return sorted(durations), dur_hist
 
 
-def add_to_db(converter, database, pitch, duration, offset, chord, ri, label):
+def add_to_db(converter, database, pitch, duration, offset, chord, ri, label, in48whole=False):
     # check if fraction is legal, add to db
     # if Fraction(duration).denominator in LEGAL_DENOMINATORS:
     try:
         bar_offset = offset % 4
         bar_offset_in_48 = int(math.floor(bar_offset * 12))
         root, scale_notes, chord_notes, chord_idx = chord_2_vec(chord)
+        if in48whole:
+            pitch=pitch-minPitch
+            duration=int(12 * duration)
         if ri:
             assert label is not None
             new_data = [pitch,
@@ -318,7 +322,7 @@ def remove_consecutive_rest_vars(data_dict, converter, ri, no_eos=False):
     return new_data_dict
 
 
-def extract_vectors(song, ri, song_labels_dict, converter, no_eos=False):
+def extract_vectors(song, ri, song_labels_dict, converter, no_eos=False, in48whole=False):
     data = []
     if ri:
         song_key = os.path.basename(song).replace('_with_chords.xml', '_0')
@@ -373,7 +377,7 @@ def extract_vectors(song, ri, song_labels_dict, converter, no_eos=False):
                         except IndexError:
                             print('finished labels before song {}'.format(song))
                             break
-                    data = add_to_db(converter, data, *note_with_tie, ri, label)
+                    data = add_to_db(converter, data, *note_with_tie, ri, label, in48whole=in48whole)
                     note_with_tie = None
 
                 else:
@@ -388,7 +392,7 @@ def extract_vectors(song, ri, song_labels_dict, converter, no_eos=False):
                     except IndexError:
                         print('finished labels before song {}'.format(song))
                         break
-                data = add_to_db(converter, data, pitch, duration, offset, current_chord, ri, label)
+                data = add_to_db(converter, data, pitch, duration, offset, current_chord, ri, label, in48whole=in48whole)
     except NoChordError:
         print('missing a chord in {}'.format(song))
         exit(1)

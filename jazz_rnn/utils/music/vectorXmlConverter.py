@@ -4,7 +4,7 @@ from bidict import bidict
 import numpy as np
 import torch
 import music21 as m21
-
+from jazz_rnn.A_data_prep.durationpitch import minPitch, REST_SYMBOL
 
 class VectorXmlConverter:
     def __init__(self, durations):
@@ -38,7 +38,7 @@ class VectorXmlConverter:
         return inds
 
 
-REST_IDX = 128
+REST_IDX = REST_SYMBOL #128
 N_NOTES = 13
 N_NOTES_NO_REST = N_NOTES - 1
 N_PITCHES = 129
@@ -48,12 +48,13 @@ NOTE_VECTOR_SIZE = 31
 
 
 def create_note(pitch_idx, duration, tie=None):
-    if pitch_idx == REST_IDX:
+
+    if pitch_idx == REST_SYMBOL: #REST_IDX
         n = m21.note.Rest(quarterLength=duration)
         assert (n is not None)
         return n
     else:
-        n = m21.note.Note(midi=pitch_idx, quarterLength=duration)
+        n = m21.note.Note(midi=pitch_idx+minPitch, quarterLength=duration) #+minPitch was added
         assert (n is not None)
         if tie:
             t = m21.tie.Tie(tie)

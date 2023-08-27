@@ -12,6 +12,7 @@ from jazz_rnn.A_data_prep.gather_data_from_xml import extract_vectors, extract_c
 from jazz_rnn.B_next_note_prediction.generation_utils import RES_LENGTH, early_start_song_dict
 from jazz_rnn.utils.music.vectorXmlConverter import chord_2_vec, NOTE_VECTOR_SIZE, chord_2_vec_on_tensor, tie_2_value
 from jazz_rnn.utilspy.meters import AverageMeter
+from jazz_rnn.A_data_prep.durationpitch import minPitch, EOS_SYMBOL
 
 PITCH_IDX_IN_NOTE, DURATION_IDX_IN_NOTE, TIE_IDX_IN_NOTE, \
 MEASURE_IDX_IN_NOTE, LOG_PROB_IDX_IN_NOTE = 0, 1, 2, 3, 4
@@ -80,7 +81,7 @@ class MusicGenerator:
             self.score_inference = ScoreInference(score_model, converter, beam_width, threshold, batch_size,
                                                   ensemble=ensemble)
             self.score_model = 'reward'
-        else:
+        else: #default 
             self.score_inference = None
             self.score_model = None
 
@@ -94,7 +95,7 @@ class MusicGenerator:
     def get_non_tuplets_idxs_(self):
         tuplets_list = []
         for dur_m21, dur_net in self.converter.bidict.items():
-            if (Fraction(dur_m21).denominator / 3) % 1 != 0:
+            if (Fraction(dur_m21).denominator / 3) % 1 != 0: # gets idx vector of all durations with denominators not divisible by 3
                 tuplets_list.append(dur_net)
         return torch.tensor(tuplets_list, device=self.device)
 
@@ -140,23 +141,28 @@ class MusicGenerator:
 
     def init_stream(self, xml_file):
         # read chords from xml
-        self.chords = extract_chords_from_xml(xml_file)
+        print("start of init_stream")
+        self.chords = extract_chords_from_xml(xml_file) #gets list of chords per measure (each element is a list of chords in a measure)
         self.stream = m21.converter.parse(xml_file).parts[0]
         self.stream.autoSort = False
+        print("start of insert_starting_notes")
         self.insert_starting_notes(xml_file)
-        self.head_len = len(self.chords)  # head_length can be defined in args for sequential generation
+        print("end of insert_starting_notes")
+        self.head_len = len(self.chords)  # head_length can be defined in args for sequential generation ; number of measure in the provided xml head
 
     def insert_starting_notes(self, xml_file):
         """insert notes to generator for the generator to continue"""
-        data = extract_vectors(song=xml_file, ri=False, song_labels_dict={}, converter=self.converter)
+        data = extract_vectors(song=xml_file, ri=False, song_labels_dict={}, converter=self.converter, in48whole=True)
+        print("extracted vectors")
         data = np.array(data)
         data = torch.as_tensor(data, device=self.device)
         data = data.unsqueeze(1).expand(data.shape[0], self.batch_size, data.shape[-1])
 
         # last note is <EOS>, so we don't want to to be pushed into the network.
         # otherwise it would ignore the entire input sequence
-        if (data[-1, :, 0] == 129).all():
+        if (data[-1, :, 0] == EOS_SYMBOL+minPitch).all():
             data = data[:-1]
+        print("check1")
 
         self.notes_net = data[-self.seq_len:]
         self.notes_attention = data
@@ -166,6 +172,8 @@ class MusicGenerator:
                 _, _, self.initial_hidden = self.model(data, self.initial_hidden)
             else:
                 _, _, self.initial_hidden, self.attentions = self.model._forward(data, [], self.initial_hidden)
+        
+        print("check2")
         first_chord = self.chords[0][0]
         root, scale_pitches, chord_pitches, chord_idx = chord_2_vec(first_chord)
         self.initial_last_note_net = data.new(
@@ -182,7 +190,7 @@ class MusicGenerator:
         else:
             return torch.tensor([], dtype=dtype, device=self.device)
 
-    def generate_measures(self, n_measures):
+    def generate_measures(self, n_measures): #GENERATES THE MUSIC FROM THE MODEL AND PROVIDED XML HEAD
         """
         generates n_measures of music.
         will continue to generate measures on top of chords cyclically
@@ -192,19 +200,21 @@ class MusicGenerator:
         -------
         m21.stream with notes and chords
         """
+        print("start of generate_measures")
         # update generation starting point:
         notes = []
         residuals_m21 = np.ndarray([self.batch_size, RES_LENGTH], dtype=Fraction)
 
         # fill initial hidden and residuals_m21 (first measure)
         residuals_m21[:, :] = 0
-        total_offset = np.zeros([self.batch_size], dtype=Fraction)
+        total_offset = np.zeros([self.batch_size], dtype=Fraction) #1D array of total offset for every batch (concurrent generation)
         last_note_net = self.initial_last_note_net
         hidden = self.initial_hidden
 
         with torch.no_grad():
 
-            if self.song in early_start_song_dict and not self.no_head:
+            if self.song in early_start_song_dict and not self.no_head: #pickup note songs
+                print("early_song_dict")
                 short_xml = early_start_song_dict[self.song]
                 self.stream = m21.converter.parse(short_xml).parts[0]
                 self.stream.autoSort = False
@@ -214,7 +224,8 @@ class MusicGenerator:
             else:
                 measure_idxs = list(range(n_measures))
 
-            for measure_idx in tqdm(measure_idxs):
+            print("entering measure generation loop")
+            for measure_idx in tqdm(measure_idxs): #tqdm makes a progress bar for the for loop
 
                 last_note_net, total_offset, hidden, residuals_m21, notes, top_score = self.generate_one_measure(
                     measure_idx,
@@ -222,11 +233,11 @@ class MusicGenerator:
                     residuals_m21,
                     last_note_net,
                     total_offset,
-                    hidden)
-
+                    hidden) #appends the notes of a new measure to the list of generated notes
+                print("generated measure")
                 n = np.array(notes)
 
-                if self.beam_search == 'measure':
+                if self.beam_search == 'measure': #default is this 
                     if measure_idx % self.beam_depth == 0:
                         if self.score_inference is not None:
                             topk_batch_indices, top_score = self.score_inference.get_topk_batch_indices_from_notes(
@@ -236,6 +247,7 @@ class MusicGenerator:
                             topk_batch_indices, top_score = get_topk_batch_indices_from_notes(n, self.beam_width)
 
                         # select k notes and repeat batch_size/beam_width times:
+                        #beam width is 2 by default 
                         notes = list(self.general_repeat(n, topk_batch_indices, dim=1))
                         residuals_m21 = self.general_repeat(residuals_m21, topk_batch_indices, dim=0)
                         last_note_net = self.general_repeat(last_note_net, topk_batch_indices, 1)
@@ -269,17 +281,17 @@ class MusicGenerator:
         elif isinstance(x, list):
             return list((self.general_repeat(t, topk_batch_indices, dim) for t in x))
 
-    def generate_one_measure(self, measure_idx, n_measures, notes, residuals_m21, last_note_net,
+    def generate_one_measure(self, measure_idx, n_measures, notes, residuals_m21, last_note_net, #generates one measure
                              total_offset, hidden):
         all_workers_done = False
-        measure_done = torch.zeros([self.batch_size], dtype=torch.uint8, device=self.device)
+        measure_done = torch.zeros([self.batch_size], dtype=torch.uint8, device=self.device) #
         measure_not_done = 1 - measure_done
         duration_in_measure_for_debug = np.zeros([self.batch_size], dtype=Fraction)
 
         while not all_workers_done:
             prev_residuals = copy.deepcopy(residuals_m21)
             duration_in_measure_for_debug, hidden, last_note_net, measure_done, measure_not_done, \
-            notes, residuals_m21, total_offset, all_workers_done = self.generate_one_note(
+            notes, residuals_m21, total_offset, all_workers_done = self.generate_one_note( #notes seems to be the overall sequence of generated notes 
                 duration_in_measure_for_debug,
                 hidden, last_note_net,
                 measure_done, measure_idx,
@@ -333,7 +345,7 @@ class MusicGenerator:
         enforce_dur = None
 
         new_hidden, new_dur_m21, new_dur_net, new_note_log_prob, new_pitch, new_tie = self.get_new_note(
-            hidden, last_note_net, total_offset, enforce_pitch, enforce_dur)
+            hidden, last_note_net, total_offset, enforce_pitch, enforce_dur) #new_dur_net is the chosen duration idx, new_dur_m21 is the actual duration, new_tie is a zeros array, new_pitch is the new pitch idx
         residual_exists_mask = self.handle_residual(measure_done, new_dur_m21, new_pitch, new_tie,
                                                     residuals_m21)
 
@@ -341,44 +353,46 @@ class MusicGenerator:
         new_dur_m21[measure_done.nonzero().cpu().numpy()] = 0
         new_note_log_prob[measure_done.nonzero().cpu()] = 0
         new_note_log_prob[residual_exists_mask.nonzero().cpu()] = 0
-        total_offset = total_offset + new_dur_m21
-        bar_offset = total_offset % 4
+        total_offset = total_offset + new_dur_m21 #total offset from beginning of song is calculated
+        bar_offset = total_offset % 4 #bar offset 
         new_offset = torch.as_tensor((self.fraction_2_float(bar_offset) * 12), dtype=torch.long,
-                                     device=self.device)
+                                     device=self.device) #converts bar offset to 12 per beat 
 
         # check for bar crosses
         end_at_end_bar = (0 == bar_offset)
         cross_end_bar_mask = ((bar_offset <= ((total_offset - new_dur_m21) % 4)) & (bar_offset != 0)) \
-                             | (new_dur_m21 > 4)
+                             | (new_dur_m21 > 4) #see if adding the new duration crosses the bar
         cross_end_bar = cross_end_bar_mask.nonzero()[0]
         at_second_half_of_bar = ((bar_offset >= 2) + cross_end_bar_mask + end_at_end_bar) > 0
 
         # handle notes that crossed end of bar
         if cross_end_bar.size != 0:
-            previous_bar_offset = ((bar_offset[cross_end_bar] - new_dur_m21[cross_end_bar]) % 4)
+            previous_bar_offset = ((bar_offset[cross_end_bar] - new_dur_m21[cross_end_bar]) % 4) #bar offset of the previous note
             duration_until_end_bar = 4 - previous_bar_offset
-            residual_duration_m21 = new_dur_m21[cross_end_bar] - duration_until_end_bar
-            new_dur_m21[cross_end_bar] = duration_until_end_bar
-            new_tie[cross_end_bar] = tie_2_value['start']
+            residual_duration_m21 = new_dur_m21[cross_end_bar] - duration_until_end_bar #residual duration past the end of the bar
+            new_dur_m21[cross_end_bar] = duration_until_end_bar #duration is chopped off at the end of the bar
+            new_tie[cross_end_bar] = tie_2_value['start'] #1 new_tie is the tie status of the current layer of generated notes. notes that cross the end of their bar are denoted as 1: the start of a tie. 
             residuals_m21[cross_end_bar] = np.concatenate((new_pitch[cross_end_bar].cpu().numpy(),
                                                            residual_duration_m21[:, np.newaxis],
                                                            new_note_log_prob[cross_end_bar][:, np.newaxis]),
-                                                          axis=1)
-            total_offset[cross_end_bar] = total_offset[cross_end_bar] - residual_duration_m21
+                                                          axis=1) #creates the note info for the new residual note 
+            total_offset[cross_end_bar] = total_offset[cross_end_bar] - residual_duration_m21 #removes the cut-off portion of cross_end_bar notes from total offset
         duration_in_measure_for_debug = duration_in_measure_for_debug + new_dur_m21
+
         # create new note for the network for next generation
         last_note_in_measure_mask = torch.as_tensor((end_at_end_bar | cross_end_bar_mask).astype(np.int64),
-                                                    dtype=torch.long, device=self.device)
+                                                    dtype=torch.long, device=self.device) #mask for if note is last note in measure
         next_chord = [self.chords[measure_idx % self.head_len][c] if last_note_in_measure_mask[ind] == 0 else
                       self.chords[(measure_idx + 1) % self.head_len][0] for ind, c in
-                      enumerate(at_second_half_of_bar)]
+                      enumerate(at_second_half_of_bar)] #gets chord of next note based on if the note crosses the end of the measure or not
         root, scale_pitches, chord_pitches, chord_idx = \
-            chord_2_vec_on_tensor(next_chord, device=self.device)
+            chord_2_vec_on_tensor(next_chord, device=self.device) #gets chord info
         new_notes_for_net = torch.cat((new_pitch, new_dur_net,
                                        new_offset.unsqueeze(1),
                                        root.unsqueeze(1), scale_pitches,
                                        chord_pitches, chord_idx.unsqueeze(1)),
-                                      dim=1)
+                                      dim=1) #formats input vector for model including current pitch and dur info
+
         # update last note only where measure is not done and finished handling residuals
         update_last_note_batch_mask = (measure_not_done * (1 - residual_exists_mask.byte()))
         update_last_note_mask = update_last_note_batch_mask.unsqueeze(-1).expand(self.batch_size,
@@ -408,30 +422,80 @@ class MusicGenerator:
                notes, residuals_m21, total_offset, all_workers_done
 
     def get_new_note(self, hidden, last_note_net, total_offset, enforce_pitch=None, enforce_duration=None):
+        #print("last_note_net:", last_note_net)
         if isinstance(self.model, ChordPitchesModel):
             output_pitch, output_duration, new_hidden = self.model(last_note_net, hidden)
         else:
-            output_pitch, output_duration, new_hidden, _ = self.model._forward(last_note_net, [], hidden)
+            output_pitch, output_duration, new_hidden, _ = self.model._forward(last_note_net, [], hidden) #forward pass ; pitch and duration logits
+
+
+        #print("output_pitch:", output_pitch)
+        #
+        pitches = last_note_net[:,:,0]
+        scale_pitches = last_note_net[:,:,4:17]
+        chord_pitches = last_note_net[:,:,17:30]
+        #print("scale_pitches:", scale_pitches)
+        #print("chord_pitches:", chord_pitches)
+        scale_idx = torch.nonzero(scale_pitches)
+        chord_idx = torch.nonzero(chord_pitches)
+        #print("scale_idx:", scale_idx)
+        #print("chord_idx:", chord_idx)
+
+        new_idx=torch.empty((0,len(chord_idx[0])),device=self.device, dtype=torch.int32)
+
+        for idx in chord_idx:
+            #print("idx:",idx)
+            idx[-1]=(idx[-1]-minPitch)%12
+            #print("idxupdated:", idx)
+            for i in range(5):
+                #new_elem = torch.zeros((1,len(idx)),device=self.device)
+                #print("new_elem:",new_elem)
+                #print("new_elem[0][:-1]:",new_elem[0][:-1])
+                #print("idx[:-1]:",idx[:-1])
+                #new_elem[0][:-1]=idx[:-1]
+                #new_elem[0][-1]=idx[-1]+12*i
+                #print("new_elem:", new_elem)
+                #new_idx=torch.cat((new_idx,new_elem))
+                output_pitch[idx[0],idx[1],idx[-1]+12*i]+=2.5
+        
+        for idx in range(len(pitches)):
+            output_pitch[0][idx][pitches[idx]]-=2
+
+        #print("new_idx:", new_idx.size())
+
+        '''
+        chord_idx=torch.cat((chord_idx,new_idx)).int().tolist()
+        chord_idx=[tuple(x) for x in chord_idx]
+        print("new chord_idx:",chord_idx)
+        print("chord_idx[0]:",chord_idx[0])
+        #print(output_pitch[])
+        
+        output_pitch[chord_idx]+=5
+        '''
+
+        #print("new output_pitch:", output_pitch)
 
         if len(output_duration.shape) == 3:
             output_pitch = output_pitch[0]
             output_duration = output_duration[0]
 
         # uncomment to give a bonus for rest notes
-        # output_pitch[:,-2] = output_pitch[:, -2] + 5
+        output_pitch[:,-2] = output_pitch[:, -2] + 3
 
-        output_duration = self.enforce_triplet_and_small_fraction_completion(output_duration, total_offset)
+        #output_duration = self.enforce_triplet_and_small_fraction_completion(output_duration, total_offset)
 
         # remove probs for notes the sax can't produce
-        output_pitch[:, :47] = -1e9
-        output_pitch[:, 83:-2] = -1e9
+        #print("output_pitch:", output_pitch)
+        output_pitch[:, :16] = -1e9 #removing the low notes *FIXED* ; used to be :47
+        output_pitch[:, 52:-2] = -1e9 #removing the high notes  ; used to be 83:-2
         output_pitch[:, -1] = -1e9  # EOS
-        if self.score_model == 'reward':
+        if self.score_model == 'reward': #default is no 
             output_duration[:, self.score_inference.reward_unsupported_durs] = -1e9
 
         if not (output_duration != -1e9).any(1).all():
             print('all durs -1e9')
 
+        #CALCULATING PROBABILITY DISTRIBUTIONS
         pitch_probs = F.softmax(output_pitch.squeeze() / self.temperature, -1)
         duration_probs = F.softmax(output_duration.squeeze() / self.temperature, -1)
         pitch_log_probs = F.log_softmax(output_pitch.squeeze() / (self.temperature), -1)
@@ -451,25 +515,60 @@ class MusicGenerator:
 
             new_pitch = torch.distributions.categorical.Categorical(probs=topp_p).sample().unsqueeze(-1)
             new_dur_net = torch.distributions.categorical.Categorical(probs=topp_d).sample().unsqueeze(-1)
-        else:
+        else: #default, samples from probability distribution 
             new_pitch = torch.multinomial(pitch_probs, 1)
             new_dur_net = torch.multinomial(duration_probs, 1)
+            
+        #print("new_dur_net:", new_dur_net)
+        #print(type(new_dur_net))
+        converted_durs = self.converter.ind_2_dur_vec(new_dur_net.squeeze())
+        #print("converted_durs:", converted_durs)
+
+        #comment out the following to get rid of 1/4 quantization
+        '''
+        for idx in range(len(converted_durs)):
+            remainder = converted_durs[idx]%12
+            if converted_durs[idx]==1:
+                converted_durs[idx]=3
+                new_dur_net[idx][0]=self.converter.dur_2_ind(3)
+            elif remainder==1:
+                newdur = converted_durs[idx]-1
+                converted_durs[idx]=newdur
+                new_dur_net[idx][0]=self.converter.dur_2_ind(newdur)
+            elif remainder==2 or remainder==4:
+                newdur = converted_durs[idx]-remainder+3
+                converted_durs[idx]=newdur
+                new_dur_net[idx][0]=self.converter.dur_2_ind(newdur)
+            elif remainder==5 or remainder==7:
+                newdur = converted_durs[idx]-remainder+6
+                converted_durs[idx]=newdur
+                new_dur_net[idx][0]=self.converter.dur_2_ind(newdur)
+            elif remainder==8 or remainder==10:
+                newdur = converted_durs[idx]-remainder+9
+                converted_durs[idx]=newdur
+                new_dur_net[idx][0]=self.converter.dur_2_ind(newdur)
+            elif remainder==11:
+                newdur = converted_durs[idx]-remainder+12
+                converted_durs[idx]=newdur
+                new_dur_net[idx][0]=self.converter.dur_2_ind(newdur)
+        '''
 
         if self.score_model is not None and len(
                 set(self.score_inference.reward_unsupported_durs).intersection(new_dur_net)) > 0:
             print('PROBLEM!!')
 
-        if enforce_pitch is not None:
+        #both none by default
+        if enforce_pitch is not None: 
             new_pitch = enforce_pitch.expand(self.batch_size, 1)
         if enforce_duration is not None:
             new_dur_net = torch.tensor(enforce_duration, dtype=torch.long, device=self.device).expand(self.batch_size,
                                                                                                       1)
-        assert 129 not in new_pitch
+        #assert 129 not in new_pitch
 
-        new_dur_m21 = self.converter.ind_2_dur_vec(new_dur_net.squeeze())
+        new_dur_m21 = np.asarray([Fraction(newdur,12) for newdur in converted_durs]) #converted to real duration HERE THIS CONVERT TO FRACTION BY DIVIDING BY 12? 
         new_tie = torch.zeros([self.batch_size], dtype=torch.long, device=self.device)
-        new_pitch_log_prob = torch.gather(pitch_log_probs, 1, new_pitch).detach().cpu().numpy()
-        new_dur_log_prob = torch.gather(duration_log_probs, 1, new_dur_net).detach().cpu().numpy()
+        new_pitch_log_prob = torch.gather(pitch_log_probs, 1, new_pitch).detach().cpu().numpy() #probability of the new pitch in the log_softmax distribution? 
+        new_dur_log_prob = torch.gather(duration_log_probs, 1, new_dur_net).detach().cpu().numpy() #same as above but for dur
         new_note_log_prob = (new_pitch_log_prob + new_dur_log_prob).squeeze() + 0.00001
         return new_hidden, new_dur_m21, new_dur_net, new_note_log_prob, new_pitch, new_tie
 
@@ -492,6 +591,7 @@ class MusicGenerator:
         return masked_probs
 
     def handle_residual(self, measure_done, new_dur_m21, new_pitch, new_tie, residuals_m21):
+        #measure_done is a batch_size long vector; residuals_m21 is a [batch_size, note_dim] array which starts out as all zeros on the first round
         residual_exists_mask = (residuals_m21[:, DURATION_IDX_IN_NOTE] > 0) & (1 - measure_done.cpu().numpy())
         residual_exists_indices = residual_exists_mask.nonzero()[0]
         residual_exists_mask = torch.as_tensor(residual_exists_mask,
@@ -499,32 +599,33 @@ class MusicGenerator:
         at_least_one_residual_exists = residual_exists_mask.sum() != 0
 
         if at_least_one_residual_exists:
-            new_pitch[residual_exists_indices] = self.object_to_tensor(
+            new_pitch[residual_exists_indices] = self.object_to_tensor( #replaces the pitches in new_pitch with those in residuals_m21 whose durations are nonzero
                 np.asarray(residuals_m21[residual_exists_indices, PITCH_IDX_IN_NOTE]),
                 int, new_pitch.dtype).unsqueeze(1)
-            new_dur_m21[residual_exists_indices] = residuals_m21[residual_exists_indices, DURATION_IDX_IN_NOTE]
+            new_dur_m21[residual_exists_indices] = residuals_m21[residual_exists_indices, DURATION_IDX_IN_NOTE] #replaces the durations in new_dur_m21 with those in residuals_m21 whose durations are nonzero
 
-            ties_with_residual = new_tie[residual_exists_indices]
+            ties_with_residual = new_tie[residual_exists_indices] #vector of zeros  of length num_of_residuals
             residuals_larger_than_4_mask = self.object_to_tensor(
                 np.asarray(new_dur_m21[residual_exists_indices]).astype(float),
-                float, torch.float) > 4
-            continue_tensor = torch.ones_like(ties_with_residual).fill_(tie_2_value['continue'])
-            end_tensor = torch.ones_like(ties_with_residual).fill_(tie_2_value['stop'])
-            new_tie[residual_exists_indices] = torch.where(residuals_larger_than_4_mask,
+                float, torch.float) > 4 # bool mask for residual durations more than 4 
+            continue_tensor = torch.ones_like(ties_with_residual).fill_(tie_2_value['continue']) #vector of 2s  of length num_of_residuals
+            end_tensor = torch.ones_like(ties_with_residual).fill_(tie_2_value['stop']) #vector of 3s  of length num_of_residuals
+            #new_tie is vector of length batch_size 
+            new_tie[residual_exists_indices] = torch.where(residuals_larger_than_4_mask, # if residual has duration longer than 4, then the value in new_tie is 2, if not, then the value is 3
                                                            continue_tensor,
                                                            end_tensor)
 
-        measure_not_done_idxs = (1 - measure_done).nonzero()
-        residuals_m21[measure_not_done_idxs.cpu().numpy(), DURATION_IDX_IN_NOTE] = 0
+        measure_not_done_idxs = (1 - measure_done).nonzero() #gets the idx of elements in batch that are not done
+        residuals_m21[measure_not_done_idxs.cpu().numpy(), DURATION_IDX_IN_NOTE] = 0 #residuals are set to zero for those that end before the end of the measure probably for the next one 
         return residual_exists_mask
 
     def enforce_triplet_and_small_fraction_completion(self, output_duration, total_offset):
         # TRIPLETS
         offset_is_triplet = np.asarray([(Fraction(t).denominator / 3) % 1 == 0 for t in total_offset])
-        if offset_is_triplet.nonzero()[0].size > 0:
+        if offset_is_triplet.nonzero()[0].size > 0: # if our current offset has a denominator divisbile by three
             for i in offset_is_triplet.nonzero()[0]:
-                output_duration[i, self.get_non_tuplets_idxs_()] = -1e9
-        no_whole_quarter_left_in_measure = np.asarray([t % 4 > 3 for t in total_offset])
+                output_duration[i, self.get_non_tuplets_idxs_()] = -1e9 #sets the logit value extremely low for durations that have denominators are not divisible by 3
+        no_whole_quarter_left_in_measure = np.asarray([t % 4 > 3 for t in total_offset]) #offsets that are in the last beat of the measure
         cancel_triplets = (no_whole_quarter_left_in_measure * (1 - offset_is_triplet)).nonzero()[0]
         if cancel_triplets.size > 0:
             for i in cancel_triplets:

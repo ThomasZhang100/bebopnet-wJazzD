@@ -29,13 +29,22 @@ def notes_to_stream(notes, stream, chords, head_len, remove_head=False, head_ear
     # Insert chords to measure:
     measure_dur = 0
     note_num = 0
+    print("second set of notes")
     for n in notes:
         note_num += 1
         if n[DURATION_IDX_IN_NOTE] == 0:
             continue
+        if isinstance(n[DURATION_IDX_IN_NOTE], Fraction):
+            notes[note_num-1][DURATION_IDX_IN_NOTE]=Fraction(int(n[DURATION_IDX_IN_NOTE].numerator), int(n[DURATION_IDX_IN_NOTE].denominator))
+        #print("note:", n)
         m.append(
             create_note(n[PITCH_IDX_IN_NOTE], n[DURATION_IDX_IN_NOTE], tie_idx_2_value(n[TIE_IDX_IN_NOTE])))
-        measure_dur += n[DURATION_IDX_IN_NOTE]
+        try:
+            measure_dur += n[DURATION_IDX_IN_NOTE]
+        except ZeroDivisionError:
+            print("measure_dur:",measure_dur)
+            print("n[DURATION_IDX_IN_NOTE]:",n[DURATION_IDX_IN_NOTE])
+            raise Exception("ZeroDivisionError")
         if measure_dur >= 4 or note_num == notes.shape[0]:
             measure_dur = 0
             # Insert chords to measure:
@@ -51,17 +60,17 @@ def notes_to_stream(notes, stream, chords, head_len, remove_head=False, head_ear
 
 def notes_to_swing_notes(notes):
     print()
-    notes = notes[notes[:, 1] != 0]
+    notes = notes[notes[:, 1] != 0] #dur not zero masked out
     durations = notes[:, 1]
     offsets = (np.cumsum(durations) - durations) % 4
     ind = 0
     while ind < len(durations) - 1:
-        if offsets[ind] % 1 == 0:
-            if durations[ind] == 0.5 and durations[ind + 1] == 0.5:
+        if offsets[ind] % 1 == 0: #if on down beat
+            if durations[ind] == 0.5 and durations[ind + 1] == 0.5: #if both notes are eight noters
                 num = np.random.randint(-2, 4)
                 noise = Fraction(num / 48)
-                durations[ind] = Fraction(14, 24) - noise
-                durations[ind + 1] = Fraction(10, 24) + noise
+                durations[ind] = Fraction(14, 24) - noise #distribute the swing
+                durations[ind + 1] = Fraction(10, 24) + noise #distribute the swing between the two notes
             no_tie = notes[ind - 1, 2] == 0 and notes[ind, 2] == 0
             if ind > 0 and durations[ind] > Fraction(1, 3) and durations[ind - 1] > Fraction(1, 3) and no_tie:
                 delay = Fraction(np.random.randint(-3, 1) / 64)
@@ -103,7 +112,15 @@ def get_topk_batch_indices_from_notes(notes, beam_width):
     topk_indices = []
     for ind in sorted_indices:
         set_size = len(notes_set)
-        notes_set.add(tuple(notes[:, ind, :2].flatten()))
+        #print(notes[:, ind, :2].flatten())
+        flatnotes = notes[:, ind, :2].flatten()
+        #print(type(flatnotes[1].denominator))
+        for el in range(len(flatnotes)):
+            if isinstance(flatnotes[el],Fraction):
+                flatnotes[el] = Fraction(int(flatnotes[el].numerator), int(flatnotes[el].denominator))
+        #print(flatnotes)
+        #print(type(flatnotes[1].denominator))
+        notes_set.add(tuple(flatnotes))
         if len(notes_set) == set_size + 1:
             topk_indices.append(ind)
         if len(topk_indices) == beam_width:

@@ -1,4 +1,6 @@
 # coding: utf-8
+#python jazz_rnn/B_next_note_prediction/transformer/train.py --config "./configs/train_model.yml" 
+#python jazz_rnn/B_next_note_prediction/transformer/train.py --config "./configs/train_model.yml" --restart --restart_dir "results/training_results/transformer/model_20230819-202857"
 import configargparse
 import time
 import math
@@ -21,7 +23,7 @@ from jazz_rnn.B_next_note_prediction.transformer.data_utils import JazzCorpus
 from jazz_rnn.B_next_note_prediction.transformer.mem_transformer import MemTransformerLM
 from jazz_rnn.B_next_note_prediction.transformer.utils.exp_utils import create_exp_dir
 from jazz_rnn.utilspy.meters import AverageMeter
-
+from jazz_rnn.A_data_prep.gather_data_from_xml import EOS_SYMBOL
 
 def init_weight(weight, args):
     if args.init == 'uniform':
@@ -277,7 +279,7 @@ class Trainer: #2
                         'pre_lnorm': args.pre_lnorm,
                         'tgt_len': args.tgt_len , 'ext_len': args.ext_len, 'mem_len': args.mem_len, #64,0,64 respectively in args.json
                         'clamp_len': args.clamp_len, #-1
-                        'pitch_sizes': (64, args.pitch_emsize), #including eos 
+                        'pitch_sizes': (EOS_SYMBOL+1, args.pitch_emsize), #including eos 
                         'duration_sizes': (self.corpus.converter.max_durations(), args.dur_emsize),
                         'offset_sizes': (48, args.offset_emsize),
                         'converter': self.corpus.converter,
@@ -496,7 +498,7 @@ class Trainer: #2
                                                 f'val_{k}': vval},
                                             global_step=self.train_step)
                 # Save the model if the validation loss is the best we've seen so far.
-                with open(os.path.join(self.args.work_dir, 'model.pt'), 'wb') as f:
+                with open(os.path.join(self.args.work_dir, 'model.pt'), 'wb') as f: #THIS IS WHERE FILE IS SAVED /results/training_results/transformer/modeldir "one model dir is created every time you run the whole training"
                     torch.save(self.model.state_dict(), f)
                 with open(os.path.join(self.args.work_dir, 'optimizer.pt'), 'wb') as f:
                     torch.save(self.optimizer.state_dict(), f)
