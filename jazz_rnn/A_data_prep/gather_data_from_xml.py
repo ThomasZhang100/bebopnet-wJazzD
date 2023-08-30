@@ -250,7 +250,7 @@ def add_to_db(converter, database, pitch, duration, offset, chord, ri, label, in
         bar_offset_in_48 = int(math.floor(bar_offset * 12))
         root, scale_notes, chord_notes, chord_idx = chord_2_vec(chord)
         if in48whole:
-            pitch=pitch-minPitch
+            # pitch = pitch-minPitch 
             duration=int(12 * duration)
         if ri:
             assert label is not None
@@ -349,7 +349,7 @@ def extract_vectors(song, ri, song_labels_dict, converter, no_eos=False, in48who
                 continue
 
             quarter_length = n.duration.quarterLength
-            pitch = n.pitch.midi if issubclass(n.__class__, m21.note.NotRest) else REST_SYMBOL
+            pitch = n.pitch.midi % 12 if issubclass(n.__class__, m21.note.NotRest) else REST_SYMBOL #added % 12 for pitch12. replace with -minPitch for non pitchq2
 
             duration = quarter_length if isinstance(quarter_length, Fraction) else Fraction(str(quarter_length))
             if duration == 0:  # grace note

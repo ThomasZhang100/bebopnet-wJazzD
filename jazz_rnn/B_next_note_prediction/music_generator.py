@@ -160,7 +160,10 @@ class MusicGenerator:
 
         # last note is <EOS>, so we don't want to to be pushed into the network.
         # otherwise it would ignore the entire input sequence
-        if (data[-1, :, 0] == EOS_SYMBOL+minPitch).all():
+        print("data:")
+        print(data)
+
+        if (data[-1, :, 0] == EOS_SYMBOL).all():
             data = data[:-1]
         print("check1")
 
@@ -447,7 +450,7 @@ class MusicGenerator:
             #print("idx:",idx)
             idx[-1]=(idx[-1]-minPitch)%12
             #print("idxupdated:", idx)
-            for i in range(5):
+            for i in range(1): #used to be 5 
                 #new_elem = torch.zeros((1,len(idx)),device=self.device)
                 #print("new_elem:",new_elem)
                 #print("new_elem[0][:-1]:",new_elem[0][:-1])
@@ -456,7 +459,7 @@ class MusicGenerator:
                 #new_elem[0][-1]=idx[-1]+12*i
                 #print("new_elem:", new_elem)
                 #new_idx=torch.cat((new_idx,new_elem))
-                output_pitch[idx[0],idx[1],idx[-1]+12*i]+=2.5
+                output_pitch[idx[0],idx[1],idx[-1]+12*i]+=0
         
         for idx in range(len(pitches)):
             output_pitch[0][idx][pitches[idx]]-=2
@@ -486,8 +489,8 @@ class MusicGenerator:
 
         # remove probs for notes the sax can't produce
         #print("output_pitch:", output_pitch)
-        output_pitch[:, :16] = -1e9 #removing the low notes *FIXED* ; used to be :47
-        output_pitch[:, 52:-2] = -1e9 #removing the high notes  ; used to be 83:-2
+        #output_pitch[:, :16] = -1e9 #removing the low notes *FIXED* ; used to be :47 (subtracted minPitch)
+        #output_pitch[:, 52:-2] = -1e9 #removing the high notes  ; used to be 83:-2
         output_pitch[:, -1] = -1e9  # EOS
         if self.score_model == 'reward': #default is no 
             output_duration[:, self.score_inference.reward_unsupported_durs] = -1e9

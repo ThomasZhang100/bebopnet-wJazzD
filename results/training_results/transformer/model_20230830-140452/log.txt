@@ -1,0 +1,130 @@
+====================================================================================================
+    - config : ./configs/train_model.yml
+    - save_name : model
+    - log_interval : 200
+    - eval_interval : 4000
+    - work_dir : results/training_results/transformer/model_20230830-140452
+    - n_layer : 4
+    - n_head : 8
+    - d_head : 50
+    - d_embed : 400
+    - d_model : 400
+    - d_inner : 1028
+    - dropout : 0.3
+    - dropatt : 0.3
+    - init : normal
+    - init_range : 0.1
+    - init_std : 0.02
+    - proj_init_std : 0.01
+    - not_tied : False
+    - pitch_emsize : 64
+    - dur_emsize : 64
+    - offset_emsize : 16
+    - chord_bias : False
+    - optim : ranger
+    - lr : 0.001
+    - mom : 0.0
+    - scheduler : cosine
+    - warmup_step : 20000
+    - decay_rate : 0.5
+    - lr_min : 0.0
+    - clip : 0.25
+    - patience : 0
+    - eta_min : 0.0
+    - data_pkl : ./results/dataset_pkls/
+    - max_step : 500000
+    - batch_size : 32
+    - tgt_len : 64
+    - eval_tgt_len : 64
+    - ext_len : 0
+    - mem_len : 64
+    - seed : 1111
+    - no_cuda : False
+    - pre_lnorm : False
+    - varlen : False
+    - restart : True
+    - restart_dir : results/training_results/transformer/model_20230827-190039
+    - clamp_len : -1
+    - max_eval_steps : -1
+    - tied : True
+    - cuda : True
+    - n_all_param : 6561342
+    - n_nonemb_param : 6501712
+====================================================================================================
+#params = 6561342
+#non emb params = 6501712
+| epoch   1 step        1 |      1 batches | lr 5e-08 | ms/batch 13.06 | loss:  4.29 | nll:  4.29 | p_nll:  2.05 | d_nll:  2.23 | p_top1: 34.77 | p_top3: 62.45 | p_top5: 76.76 | d_top1: 27.93 | d_top3: 64.50 | p_entropy:  2.63 | d_entropy:  2.08 | t_entropy:  4.71 | ppl    72.652
+----------------------------------------------------------------------------------------------------
+| Eval   0 at step        1 | time: 13.10s | valid loss  4.41 | valid nll     4.410
+----------------------------------------------------------------------------------------------------
+| epoch   1 step      200 |    200 batches | lr 1e-05 | ms/batch 377.89 | loss:  3.89 | nll:  3.89 | p_nll:  1.81 | d_nll:  2.08 | p_top1: 41.39 | p_top3: 68.60 | p_top5: 81.56 | d_top1: 32.78 | d_top3: 67.81 | p_entropy:  2.63 | d_entropy:  2.07 | t_entropy:  4.70 | ppl    48.997
+| epoch   1 step      400 |    400 batches | lr 2e-05 | ms/batch 320.78 | loss:  3.88 | nll:  3.88 | p_nll:  1.79 | d_nll:  2.09 | p_top1: 41.85 | p_top3: 69.21 | p_top5: 82.01 | d_top1: 32.71 | d_top3: 67.65 | p_entropy:  2.63 | d_entropy:  2.09 | t_entropy:  4.71 | ppl    48.407
+| epoch   1 step      600 |    600 batches | lr 3e-05 | ms/batch 320.13 | loss:  3.86 | nll:  3.86 | p_nll:  1.78 | d_nll:  2.08 | p_top1: 42.38 | p_top3: 69.47 | p_top5: 82.27 | d_top1: 32.93 | d_top3: 67.87 | p_entropy:  2.63 | d_entropy:  2.09 | t_entropy:  4.71 | ppl    47.379
+| epoch   2 step      800 |    800 batches | lr 4e-05 | ms/batch 197.47 | loss:  3.84 | nll:  3.84 | p_nll:  1.78 | d_nll:  2.05 | p_top1: 42.12 | p_top3: 69.35 | p_top5: 81.91 | d_top1: 33.40 | d_top3: 68.74 | p_entropy:  2.63 | d_entropy:  2.06 | t_entropy:  4.69 | ppl    46.445
+| epoch   2 step     1000 |   1000 batches | lr 5e-05 | ms/batch 318.12 | loss:  3.85 | nll:  3.85 | p_nll:  1.77 | d_nll:  2.07 | p_top1: 42.50 | p_top3: 69.68 | p_top5: 82.27 | d_top1: 32.82 | d_top3: 67.76 | p_entropy:  2.63 | d_entropy:  2.08 | t_entropy:  4.71 | ppl    46.943
+| epoch   2 step     1200 |   1200 batches | lr 6e-05 | ms/batch 317.26 | loss:  3.82 | nll:  3.82 | p_nll:  1.76 | d_nll:  2.05 | p_top1: 42.85 | p_top3: 69.96 | p_top5: 82.50 | d_top1: 33.37 | d_top3: 68.46 | p_entropy:  2.63 | d_entropy:  2.07 | t_entropy:  4.70 | ppl    45.521
+| epoch   3 step     1400 |   1400 batches | lr 7e-05 | ms/batch 72.71 | loss:  3.80 | nll:  3.80 | p_nll:  1.79 | d_nll:  2.00 | p_top1: 41.56 | p_top3: 68.70 | p_top5: 81.61 | d_top1: 33.70 | d_top3: 70.17 | p_entropy:  2.63 | d_entropy:  2.01 | t_entropy:  4.64 | ppl    44.637
+| epoch   3 step     1600 |   1600 batches | lr 8e-05 | ms/batch 317.99 | loss:  3.82 | nll:  3.82 | p_nll:  1.75 | d_nll:  2.07 | p_top1: 43.26 | p_top3: 70.37 | p_top5: 82.81 | d_top1: 33.34 | d_top3: 67.99 | p_entropy:  2.63 | d_entropy:  2.07 | t_entropy:  4.70 | ppl    45.466
+| epoch   3 step     1800 |   1800 batches | lr 9e-05 | ms/batch 318.22 | loss:  3.80 | nll:  3.80 | p_nll:  1.75 | d_nll:  2.05 | p_top1: 43.34 | p_top3: 70.29 | p_top5: 82.72 | d_top1: 33.42 | d_top3: 68.48 | p_entropy:  2.63 | d_entropy:  2.06 | t_entropy:  4.69 | ppl    44.667
+| epoch   3 step     2000 |   2000 batches | lr 0.0001 | ms/batch 317.39 | loss:  3.78 | nll:  3.78 | p_nll:  1.75 | d_nll:  2.03 | p_top1: 43.41 | p_top3: 70.42 | p_top5: 82.86 | d_top1: 33.76 | d_top3: 68.92 | p_entropy:  2.63 | d_entropy:  2.05 | t_entropy:  4.68 | ppl    43.838
+| epoch   4 step     2200 |   2200 batches | lr 0.00011 | ms/batch 267.47 | loss:  3.78 | nll:  3.78 | p_nll:  1.75 | d_nll:  2.03 | p_top1: 43.04 | p_top3: 70.18 | p_top5: 82.66 | d_top1: 34.10 | d_top3: 69.26 | p_entropy:  2.63 | d_entropy:  2.03 | t_entropy:  4.66 | ppl    43.788
+| epoch   4 step     2400 |   2400 batches | lr 0.00012 | ms/batch 318.19 | loss:  3.79 | nll:  3.79 | p_nll:  1.74 | d_nll:  2.05 | p_top1: 43.53 | p_top3: 70.55 | p_top5: 82.93 | d_top1: 33.51 | d_top3: 68.65 | p_entropy:  2.63 | d_entropy:  2.06 | t_entropy:  4.69 | ppl    44.070
+| epoch   4 step     2600 |   2600 batches | lr 0.00013 | ms/batch 317.66 | loss:  3.78 | nll:  3.78 | p_nll:  1.74 | d_nll:  2.05 | p_top1: 43.73 | p_top3: 70.63 | p_top5: 83.02 | d_top1: 33.55 | d_top3: 68.42 | p_entropy:  2.63 | d_entropy:  2.06 | t_entropy:  4.68 | ppl    43.962
+| epoch   5 step     2800 |   2800 batches | lr 0.00014 | ms/batch 146.37 | loss:  3.78 | nll:  3.78 | p_nll:  1.76 | d_nll:  2.03 | p_top1: 43.14 | p_top3: 70.06 | p_top5: 82.49 | d_top1: 33.81 | d_top3: 69.30 | p_entropy:  2.63 | d_entropy:  2.03 | t_entropy:  4.65 | ppl    43.894
+| epoch   5 step     3000 |   3000 batches | lr 0.00015 | ms/batch 318.73 | loss:  3.77 | nll:  3.77 | p_nll:  1.73 | d_nll:  2.03 | p_top1: 43.76 | p_top3: 70.76 | p_top5: 83.12 | d_top1: 33.83 | d_top3: 69.08 | p_entropy:  2.63 | d_entropy:  2.05 | t_entropy:  4.67 | ppl    43.191
+| epoch   5 step     3200 |   3200 batches | lr 0.00016 | ms/batch 317.24 | loss:  3.77 | nll:  3.77 | p_nll:  1.73 | d_nll:  2.04 | p_top1: 43.96 | p_top3: 70.91 | p_top5: 83.18 | d_top1: 33.66 | d_top3: 68.71 | p_entropy:  2.63 | d_entropy:  2.05 | t_entropy:  4.68 | ppl    43.350
+| epoch   6 step     3400 |   3400 batches | lr 0.00017 | ms/batch 23.26 | loss:  3.77 | nll:  3.77 | p_nll:  1.74 | d_nll:  2.02 | p_top1: 43.76 | p_top3: 70.95 | p_top5: 83.37 | d_top1: 33.82 | d_top3: 69.26 | p_entropy:  2.63 | d_entropy:  2.00 | t_entropy:  4.62 | ppl    43.250
+| epoch   6 step     3600 |   3600 batches | lr 0.00018 | ms/batch 320.45 | loss:  3.75 | nll:  3.75 | p_nll:  1.73 | d_nll:  2.03 | p_top1: 43.91 | p_top3: 70.80 | p_top5: 83.10 | d_top1: 34.05 | d_top3: 69.17 | p_entropy:  2.63 | d_entropy:  2.04 | t_entropy:  4.67 | ppl    42.707
+| epoch   6 step     3800 |   3800 batches | lr 0.00019 | ms/batch 318.46 | loss:  3.75 | nll:  3.75 | p_nll:  1.73 | d_nll:  2.02 | p_top1: 43.93 | p_top3: 70.97 | p_top5: 83.26 | d_top1: 34.11 | d_top3: 69.20 | p_entropy:  2.63 | d_entropy:  2.03 | t_entropy:  4.66 | ppl    42.519
+| epoch   6 step     4000 |   4000 batches | lr 0.0002 | ms/batch 318.55 | loss:  3.74 | nll:  3.74 | p_nll:  1.72 | d_nll:  2.02 | p_top1: 44.13 | p_top3: 71.17 | p_top5: 83.35 | d_top1: 34.11 | d_top3: 69.16 | p_entropy:  2.63 | d_entropy:  2.03 | t_entropy:  4.66 | ppl    42.252
+----------------------------------------------------------------------------------------------------
+| Eval   1 at step     4000 | time: 206.32s | valid loss  4.47 | valid nll     4.470
+----------------------------------------------------------------------------------------------------
+| epoch   7 step     4200 |   4200 batches | lr 0.00021 | ms/batch 219.21 | loss:  3.74 | nll:  3.74 | p_nll:  1.73 | d_nll:  2.00 | p_top1: 43.80 | p_top3: 70.77 | p_top5: 82.92 | d_top1: 34.48 | d_top3: 69.89 | p_entropy:  2.63 | d_entropy:  2.02 | t_entropy:  4.65 | ppl    41.973
+| epoch   7 step     4400 |   4400 batches | lr 0.00022 | ms/batch 319.08 | loss:  3.76 | nll:  3.76 | p_nll:  1.72 | d_nll:  2.04 | p_top1: 44.19 | p_top3: 71.19 | p_top5: 83.35 | d_top1: 33.84 | d_top3: 68.75 | p_entropy:  2.63 | d_entropy:  2.04 | t_entropy:  4.67 | ppl    42.889
+| epoch   7 step     4600 |   4600 batches | lr 0.00023 | ms/batch 318.02 | loss:  3.74 | nll:  3.74 | p_nll:  1.72 | d_nll:  2.02 | p_top1: 44.36 | p_top3: 71.24 | p_top5: 83.41 | d_top1: 34.12 | d_top3: 69.10 | p_entropy:  2.63 | d_entropy:  2.03 | t_entropy:  4.65 | ppl    42.067
+| epoch   8 step     4800 |   4800 batches | lr 0.00024 | ms/batch 97.02 | loss:  3.74 | nll:  3.74 | p_nll:  1.76 | d_nll:  1.99 | p_top1: 42.99 | p_top3: 69.87 | p_top5: 82.33 | d_top1: 34.56 | d_top3: 70.67 | p_entropy:  2.63 | d_entropy:  2.00 | t_entropy:  4.63 | ppl    42.239
+| epoch   8 step     5000 |   5000 batches | lr 0.00025 | ms/batch 316.84 | loss:  3.75 | nll:  3.75 | p_nll:  1.72 | d_nll:  2.03 | p_top1: 44.23 | p_top3: 71.17 | p_top5: 83.39 | d_top1: 33.92 | d_top3: 68.88 | p_entropy:  2.63 | d_entropy:  2.04 | t_entropy:  4.66 | ppl    42.477
+| epoch   8 step     5200 |   5200 batches | lr 0.00026 | ms/batch 317.03 | loss:  3.73 | nll:  3.73 | p_nll:  1.70 | d_nll:  2.03 | p_top1: 44.85 | p_top3: 71.67 | p_top5: 83.75 | d_top1: 33.95 | d_top3: 68.96 | p_entropy:  2.63 | d_entropy:  2.04 | t_entropy:  4.66 | ppl    41.862
+| epoch   8 step     5400 |   5400 batches | lr 0.00027 | ms/batch 317.53 | loss:  3.73 | nll:  3.73 | p_nll:  1.71 | d_nll:  2.01 | p_top1: 44.42 | p_top3: 71.23 | p_top5: 83.45 | d_top1: 34.44 | d_top3: 69.56 | p_entropy:  2.63 | d_entropy:  2.02 | t_entropy:  4.65 | ppl    41.495
+| epoch   9 step     5600 |   5600 batches | lr 0.00028 | ms/batch 289.84 | loss:  3.72 | nll:  3.72 | p_nll:  1.72 | d_nll:  2.00 | p_top1: 44.11 | p_top3: 71.13 | p_top5: 83.29 | d_top1: 34.57 | d_top3: 69.87 | p_entropy:  2.63 | d_entropy:  2.01 | t_entropy:  4.64 | ppl    41.371
+| epoch   9 step     5800 |   5800 batches | lr 0.00029 | ms/batch 318.31 | loss:  3.73 | nll:  3.73 | p_nll:  1.71 | d_nll:  2.02 | p_top1: 44.65 | p_top3: 71.43 | p_top5: 83.49 | d_top1: 34.31 | d_top3: 69.43 | p_entropy:  2.63 | d_entropy:  2.02 | t_entropy:  4.65 | ppl    41.626
+| epoch   9 step     6000 |   6000 batches | lr 0.0003 | ms/batch 318.63 | loss:  3.74 | nll:  3.74 | p_nll:  1.71 | d_nll:  2.03 | p_top1: 44.57 | p_top3: 71.50 | p_top5: 83.52 | d_top1: 34.04 | d_top3: 69.07 | p_entropy:  2.63 | d_entropy:  2.03 | t_entropy:  4.66 | ppl    41.954
+| epoch  10 step     6200 |   6200 batches | lr 0.00031 | ms/batch 169.46 | loss:  3.74 | nll:  3.74 | p_nll:  1.72 | d_nll:  2.01 | p_top1: 43.81 | p_top3: 70.95 | p_top5: 83.16 | d_top1: 34.40 | d_top3: 69.74 | p_entropy:  2.63 | d_entropy:  2.02 | t_entropy:  4.65 | ppl    41.897
+| epoch  10 step     6400 |   6400 batches | lr 0.00032 | ms/batch 318.33 | loss:  3.73 | nll:  3.73 | p_nll:  1.71 | d_nll:  2.02 | p_top1: 44.45 | p_top3: 71.44 | p_top5: 83.58 | d_top1: 34.30 | d_top3: 69.37 | p_entropy:  2.63 | d_entropy:  2.02 | t_entropy:  4.65 | ppl    41.520
+| epoch  10 step     6600 |   6600 batches | lr 0.00033 | ms/batch 318.36 | loss:  3.72 | nll:  3.72 | p_nll:  1.71 | d_nll:  2.01 | p_top1: 44.54 | p_top3: 71.56 | p_top5: 83.60 | d_top1: 34.26 | d_top3: 69.44 | p_entropy:  2.63 | d_entropy:  2.02 | t_entropy:  4.65 | ppl    41.338
+| epoch  11 step     6800 |   6800 batches | lr 0.00034 | ms/batch 47.80 | loss:  3.75 | nll:  3.75 | p_nll:  1.76 | d_nll:  1.99 | p_top1: 42.79 | p_top3: 70.05 | p_top5: 82.48 | d_top1: 34.38 | d_top3: 70.56 | p_entropy:  2.63 | d_entropy:  2.01 | t_entropy:  4.63 | ppl    42.622
+| epoch  11 step     7000 |   7000 batches | lr 0.00035 | ms/batch 316.32 | loss:  3.72 | nll:  3.72 | p_nll:  1.70 | d_nll:  2.02 | p_top1: 44.95 | p_top3: 71.84 | p_top5: 83.84 | d_top1: 34.21 | d_top3: 69.16 | p_entropy:  2.63 | d_entropy:  2.03 | t_entropy:  4.65 | ppl    41.319
+| epoch  11 step     7200 |   7200 batches | lr 0.00036 | ms/batch 318.19 | loss:  3.72 | nll:  3.72 | p_nll:  1.71 | d_nll:  2.00 | p_top1: 44.36 | p_top3: 71.25 | p_top5: 83.48 | d_top1: 34.61 | d_top3: 69.77 | p_entropy:  2.63 | d_entropy:  2.01 | t_entropy:  4.64 | ppl    41.085
+| epoch  11 step     7400 |   7400 batches | lr 0.00037 | ms/batch 315.99 | loss:  3.71 | nll:  3.71 | p_nll:  1.70 | d_nll:  2.01 | p_top1: 44.73 | p_top3: 71.74 | p_top5: 83.73 | d_top1: 34.42 | d_top3: 69.60 | p_entropy:  2.63 | d_entropy:  2.01 | t_entropy:  4.64 | ppl    40.904
+| epoch  12 step     7600 |   7600 batches | lr 0.00038 | ms/batch 241.22 | loss:  3.71 | nll:  3.71 | p_nll:  1.72 | d_nll:  1.99 | p_top1: 44.31 | p_top3: 71.15 | p_top5: 83.29 | d_top1: 34.74 | d_top3: 70.19 | p_entropy:  2.63 | d_entropy:  2.00 | t_entropy:  4.63 | ppl    40.800
+| epoch  12 step     7800 |   7800 batches | lr 0.00039 | ms/batch 317.01 | loss:  3.72 | nll:  3.72 | p_nll:  1.70 | d_nll:  2.02 | p_top1: 44.79 | p_top3: 71.74 | p_top5: 83.66 | d_top1: 34.21 | d_top3: 69.26 | p_entropy:  2.63 | d_entropy:  2.03 | t_entropy:  4.65 | ppl    41.350
+| epoch  12 step     8000 |   8000 batches | lr 0.0004 | ms/batch 317.42 | loss:  3.73 | nll:  3.73 | p_nll:  1.70 | d_nll:  2.02 | p_top1: 44.68 | p_top3: 71.63 | p_top5: 83.74 | d_top1: 34.08 | d_top3: 69.11 | p_entropy:  2.63 | d_entropy:  2.03 | t_entropy:  4.65 | ppl    41.621
+----------------------------------------------------------------------------------------------------
+| Eval   2 at step     8000 | time: 185.24s | valid loss  4.48 | valid nll     4.482
+----------------------------------------------------------------------------------------------------
+| epoch  13 step     8200 |   8200 batches | lr 0.00041 | ms/batch 119.47 | loss:  3.72 | nll:  3.72 | p_nll:  1.73 | d_nll:  1.99 | p_top1: 43.82 | p_top3: 70.56 | p_top5: 82.94 | d_top1: 34.86 | d_top3: 70.32 | p_entropy:  2.63 | d_entropy:  1.99 | t_entropy:  4.62 | ppl    41.311
+| epoch  13 step     8400 |   8400 batches | lr 0.00042 | ms/batch 321.50 | loss:  3.72 | nll:  3.72 | p_nll:  1.71 | d_nll:  2.01 | p_top1: 44.60 | p_top3: 71.56 | p_top5: 83.72 | d_top1: 34.21 | d_top3: 69.40 | p_entropy:  2.63 | d_entropy:  2.02 | t_entropy:  4.65 | ppl    41.293
+| epoch  13 step     8600 |   8600 batches | lr 0.00043 | ms/batch 317.69 | loss:  3.72 | nll:  3.72 | p_nll:  1.70 | d_nll:  2.02 | p_top1: 44.98 | p_top3: 71.82 | p_top5: 83.89 | d_top1: 34.29 | d_top3: 69.19 | p_entropy:  2.63 | d_entropy:  2.03 | t_entropy:  4.65 | ppl    41.276
+| epoch  13 step     8800 |   8800 batches | lr 0.00044 | ms/batch 318.28 | loss:  3.71 | nll:  3.71 | p_nll:  1.70 | d_nll:  2.01 | p_top1: 45.01 | p_top3: 71.95 | p_top5: 83.95 | d_top1: 34.42 | d_top3: 69.36 | p_entropy:  2.63 | d_entropy:  2.02 | t_entropy:  4.64 | ppl    40.851
+| epoch  14 step     9000 |   9000 batches | lr 0.00045 | ms/batch 315.60 | loss:  3.71 | nll:  3.71 | p_nll:  1.71 | d_nll:  2.00 | p_top1: 44.48 | p_top3: 71.45 | p_top5: 83.51 | d_top1: 34.66 | d_top3: 69.89 | p_entropy:  2.63 | d_entropy:  2.01 | t_entropy:  4.63 | ppl    40.822
+| epoch  14 step     9200 |   9200 batches | lr 0.00046 | ms/batch 318.17 | loss:  3.71 | nll:  3.71 | p_nll:  1.71 | d_nll:  2.01 | p_top1: 44.70 | p_top3: 71.68 | p_top5: 83.67 | d_top1: 34.55 | d_top3: 69.57 | p_entropy:  2.63 | d_entropy:  2.01 | t_entropy:  4.64 | ppl    41.056
+| epoch  14 step     9400 |   9400 batches | lr 0.00047 | ms/batch 317.63 | loss:  3.72 | nll:  3.72 | p_nll:  1.70 | d_nll:  2.01 | p_top1: 44.81 | p_top3: 71.62 | p_top5: 83.60 | d_top1: 34.35 | d_top3: 69.54 | p_entropy:  2.63 | d_entropy:  2.02 | t_entropy:  4.64 | ppl    41.196
+| epoch  15 step     9600 |   9600 batches | lr 0.00048 | ms/batch 194.80 | loss:  3.72 | nll:  3.72 | p_nll:  1.72 | d_nll:  2.00 | p_top1: 44.10 | p_top3: 71.20 | p_top5: 83.30 | d_top1: 34.75 | d_top3: 70.14 | p_entropy:  2.63 | d_entropy:  2.01 | t_entropy:  4.64 | ppl    41.239
+| epoch  15 step     9800 |   9800 batches | lr 0.00049 | ms/batch 317.52 | loss:  3.72 | nll:  3.72 | p_nll:  1.71 | d_nll:  2.02 | p_top1: 44.69 | p_top3: 71.67 | p_top5: 83.74 | d_top1: 34.17 | d_top3: 69.25 | p_entropy:  2.63 | d_entropy:  2.02 | t_entropy:  4.65 | ppl    41.402
+| epoch  15 step    10000 |  10000 batches | lr 0.0005 | ms/batch 318.89 | loss:  3.71 | nll:  3.71 | p_nll:  1.70 | d_nll:  2.00 | p_top1: 44.77 | p_top3: 71.58 | p_top5: 83.67 | d_top1: 34.56 | d_top3: 69.71 | p_entropy:  2.63 | d_entropy:  2.01 | t_entropy:  4.64 | ppl    40.814
+| epoch  16 step    10200 |  10200 batches | lr 0.00051 | ms/batch 71.99 | loss:  3.73 | nll:  3.73 | p_nll:  1.75 | d_nll:  1.97 | p_top1: 42.92 | p_top3: 70.13 | p_top5: 82.56 | d_top1: 34.46 | d_top3: 70.88 | p_entropy:  2.63 | d_entropy:  1.99 | t_entropy:  4.61 | ppl    41.577
+| epoch  16 step    10400 |  10400 batches | lr 0.00052 | ms/batch 319.61 | loss:  3.72 | nll:  3.72 | p_nll:  1.70 | d_nll:  2.02 | p_top1: 44.94 | p_top3: 71.85 | p_top5: 83.90 | d_top1: 34.40 | d_top3: 69.17 | p_entropy:  2.63 | d_entropy:  2.02 | t_entropy:  4.65 | ppl    41.222
+| epoch  16 step    10600 |  10600 batches | lr 0.00053 | ms/batch 319.30 | loss:  3.71 | nll:  3.71 | p_nll:  1.70 | d_nll:  2.01 | p_top1: 44.69 | p_top3: 71.59 | p_top5: 83.66 | d_top1: 34.44 | d_top3: 69.54 | p_entropy:  2.63 | d_entropy:  2.01 | t_entropy:  4.64 | ppl    40.952
+| epoch  16 step    10800 |  10800 batches | lr 0.00054 | ms/batch 316.99 | loss:  3.70 | nll:  3.70 | p_nll:  1.71 | d_nll:  1.99 | p_top1: 44.57 | p_top3: 71.58 | p_top5: 83.68 | d_top1: 34.83 | d_top3: 69.99 | p_entropy:  2.63 | d_entropy:  2.00 | t_entropy:  4.63 | ppl    40.499
+| epoch  17 step    11000 |  11000 batches | lr 0.00055 | ms/batch 265.37 | loss:  3.71 | nll:  3.71 | p_nll:  1.72 | d_nll:  1.99 | p_top1: 44.42 | p_top3: 71.34 | p_top5: 83.44 | d_top1: 34.87 | d_top3: 70.23 | p_entropy:  2.63 | d_entropy:  2.00 | t_entropy:  4.62 | ppl    40.652
+| epoch  17 step    11200 |  11200 batches | lr 0.00056 | ms/batch 317.23 | loss:  3.72 | nll:  3.72 | p_nll:  1.71 | d_nll:  2.01 | p_top1: 44.67 | p_top3: 71.51 | p_top5: 83.53 | d_top1: 34.44 | d_top3: 69.62 | p_entropy:  2.63 | d_entropy:  2.02 | t_entropy:  4.64 | ppl    41.257
+| epoch  17 step    11400 |  11400 batches | lr 0.00057 | ms/batch 318.28 | loss:  3.72 | nll:  3.72 | p_nll:  1.71 | d_nll:  2.02 | p_top1: 44.67 | p_top3: 71.66 | p_top5: 83.69 | d_top1: 34.12 | d_top3: 69.32 | p_entropy:  2.63 | d_entropy:  2.02 | t_entropy:  4.65 | ppl    41.448
+| epoch  18 step    11600 |  11600 batches | lr 0.00058 | ms/batch 144.11 | loss:  3.73 | nll:  3.73 | p_nll:  1.73 | d_nll:  2.00 | p_top1: 43.85 | p_top3: 70.81 | p_top5: 82.91 | d_top1: 34.60 | d_top3: 70.13 | p_entropy:  2.63 | d_entropy:  2.00 | t_entropy:  4.63 | ppl    41.570
+| epoch  18 step    11800 |  11800 batches | lr 0.00059 | ms/batch 316.39 | loss:  3.72 | nll:  3.72 | p_nll:  1.71 | d_nll:  2.01 | p_top1: 44.54 | p_top3: 71.57 | p_top5: 83.68 | d_top1: 34.48 | d_top3: 69.69 | p_entropy:  2.63 | d_entropy:  2.01 | t_entropy:  4.64 | ppl    41.069
+| epoch  18 step    12000 |  12000 batches | lr 0.0006 | ms/batch 317.02 | loss:  3.73 | nll:  3.73 | p_nll:  1.71 | d_nll:  2.02 | p_top1: 44.59 | p_top3: 71.63 | p_top5: 83.72 | d_top1: 34.28 | d_top3: 69.29 | p_entropy:  2.63 | d_entropy:  2.02 | t_entropy:  4.65 | ppl    41.529
+----------------------------------------------------------------------------------------------------
+| Eval   3 at step    12000 | time: 165.65s | valid loss  4.52 | valid nll     4.520
+----------------------------------------------------------------------------------------------------
+| epoch  19 step    12200 |  12200 batches | lr 0.00061 | ms/batch 21.78 | loss:  3.73 | nll:  3.73 | p_nll:  1.73 | d_nll:  2.00 | p_top1: 44.17 | p_top3: 71.53 | p_top5: 83.87 | d_top1: 34.49 | d_top3: 70.03 | p_entropy:  2.63 | d_entropy:  2.01 | t_entropy:  4.64 | ppl    41.850
+| epoch  19 step    12400 |  12400 batches | lr 0.00062 | ms/batch 321.09 | loss:  3.72 | nll:  3.72 | p_nll:  1.71 | d_nll:  2.01 | p_top1: 44.48 | p_top3: 71.41 | p_top5: 83.45 | d_top1: 34.50 | d_top3: 69.58 | p_entropy:  2.63 | d_entropy:  2.01 | t_entropy:  4.64 | ppl    41.153

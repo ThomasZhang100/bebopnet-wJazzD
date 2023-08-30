@@ -15,8 +15,8 @@ def transpose_data_torch(p, data):
 
     tranposed_data = tranposed_data.view(-1, tranposed_data.shape[-1])
     not_rest_or_eos_mask = (tranposed_data[:, 0] != REST_SYMBOL) & (tranposed_data[:, 0] != EOS_SYMBOL)
-    tranposed_data[not_rest_or_eos_mask, 0] = tranposed_data[not_rest_or_eos_mask, 0] + p
-    tranposed_data[:, 3] = (tranposed_data[:, 3] + p) % 12
+    tranposed_data[not_rest_or_eos_mask, 0] = (tranposed_data[not_rest_or_eos_mask, 0] + p) % 12
+    tranposed_data[:, 3] = (tranposed_data[:, 3] + p) % 12 #added %12 for pitch12
     tranposed_data[:, 4:16] = torch.roll(tranposed_data[:, 4:16], shifts=int(p), dims=1)
     tranposed_data[:, 17:29] = torch.roll(tranposed_data[:, 17:29], shifts=int(p), dims=1)
     tranposed_data = tranposed_data.view(*shape)
