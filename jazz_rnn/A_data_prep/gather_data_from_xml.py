@@ -21,11 +21,15 @@ from jazz_rnn.utils.music.vectorXmlConverter import *
 # [4:17]  13 ints - scale pitches - indicators of participating pitches
 # [18:31] 13 ints - chord pitches - indicators of participating pitches
 # [31]      1 int  - chord idx - type of chord (Major, minor...)
-from jazz_rnn.A_data_prep.durationpitch import REST_SYMBOL #128
-from jazz_rnn.A_data_prep.durationpitch import EOS_SYMBOL, minPitch#129
+from jazz_rnn.A_data_prep.durationpitch import REST_SYMBOL, REST_SYMBOL12 #128
+from jazz_rnn.A_data_prep.durationpitch import EOS_SYMBOL, EOS_SYMBOL12, minPitch, minPitch12#129
 
 EOS_VECTOR = [EOS_SYMBOL] + [0] * 30
 EOS_REWARD_VECTOR = [EOS_SYMBOL] + [0] * 31
+
+EOS_VECTOR12 = [EOS_SYMBOL12] + [0] * 30
+EOS_REWARD_VECTOR12 = [EOS_SYMBOL12] + [0] * 31
+
 LEGAL_DENOMINATORS = [1, 2, 3, 4, 6]
 
 
@@ -145,7 +149,7 @@ def extract_data_from_xml(args):
     print('All done!')
     return train_data
 
-
+'''
 def transpose_data_dict(pitches, data_dict):
     new_data_dict = {}
     for song_name, data in data_dict.items():
@@ -165,7 +169,7 @@ def transpose_data(p, data):
     tranposed_data[:, 4:16] = np.roll(data[:, 4:16], shift=p, axis=1)
     tranposed_data[:, 17:29] = np.roll(data[:, 17:29], shift=p, axis=1)
     return tranposed_data
-
+'''
 
 def results_2_dict(results, songs):
     results_dict = {}
@@ -274,11 +278,11 @@ def add_to_db(converter, database, pitch, duration, offset, chord, ri, label, in
     return database
 
 
-def add_eos(database, index=None, ri=False):
+def add_eos(database, index=None, ri=False, pitch12=False):
     if ri:
-        eos_vector = EOS_REWARD_VECTOR
+        eos_vector = EOS_REWARD_VECTOR12 if pitch12 else EOS_REWARD_VECTOR
     else:
-        eos_vector = EOS_VECTOR
+        eos_vector = EOS_VECTOR12 if pitch12 else EOS_VECTOR
     if not index:
         database.append(eos_vector)
     else:
@@ -321,8 +325,9 @@ def remove_consecutive_rest_vars(data_dict, converter, ri, no_eos=False):
                 i += 1
     return new_data_dict
 
-
-def extract_vectors(song, ri, song_labels_dict, converter, no_eos=False, in48whole=False):
+#need this
+def extract_vectors(song, ri, song_labels_dict, converter, no_eos=False, in48whole=False, pitch12=False):
+    print("pitch12:", pitch12)
     data = []
     if ri:
         song_key = os.path.basename(song).replace('_with_chords.xml', '_0')
@@ -349,7 +354,11 @@ def extract_vectors(song, ri, song_labels_dict, converter, no_eos=False, in48who
                 continue
 
             quarter_length = n.duration.quarterLength
-            pitch = n.pitch.midi % 12 if issubclass(n.__class__, m21.note.NotRest) else REST_SYMBOL #added % 12 for pitch12. replace with -minPitch for non pitchq2
+            if pitch12:
+                pitch = n.pitch.midi % 12 if issubclass(n.__class__, m21.note.NotRest) else REST_SYMBOL12 #added % 12 for pitch12. replace with -minPitch for non pitchq2
+            else:
+                pitch = n.pitch.midi - minPitch if issubclass(n.__class__, m21.note.NotRest) else REST_SYMBOL
+            
 
             duration = quarter_length if isinstance(quarter_length, Fraction) else Fraction(str(quarter_length))
             if duration == 0:  # grace note
@@ -397,10 +406,10 @@ def extract_vectors(song, ri, song_labels_dict, converter, no_eos=False, in48who
         print('missing a chord in {}'.format(song))
         exit(1)
     if not no_eos:
-        add_eos(data, ri=ri)
+        add_eos(data, ri=ri, pitch12=pitch12)
     return data
 
-
+#need this
 def extract_chords_from_xml(xml_file):
     s = m21.converter.parse(xml_file)
     measures = s.parts[0].getElementsByClass(m21.stream.Measure)

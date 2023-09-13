@@ -1,4 +1,5 @@
-#python jazz_rnn/B_next_note_prediction/generate_from_xml.py --model_dir "results/training_results/transformer/model_20230821-094938" --checkpoint 'model.pt'
+#python jazz_rnn/B_next_note_prediction/generate_from_xml.py --model_dir "results/training_results/transformer/model_20230821-094938" --checkpoint 'model.pt' 
+#python jazz_rnn/B_next_note_prediction/generate_from_xml.py --model_dir "results/training_results/transformer/model_20230827-190039" --checkpoint 'model.pt' --pitch12
 
 import datetime
 import json
@@ -19,7 +20,7 @@ from jazz_rnn.B_next_note_prediction.generation_utils import song_params_dict, p
 from jazz_rnn.B_next_note_prediction.music_generator import MusicGenerator
 from jazz_rnn.utils.music_utils import notes_to_stream, notes_to_swing_notes
 from jazz_rnn.B_next_note_prediction.transformer.mem_transformer import MemTransformerLM
-from jazz_rnn.A_data_prep.durationpitch import minPitch
+from jazz_rnn.A_data_prep.durationpitch import minPitch, minPitch12
 
 def generate_from_xml(args):
     parser = argparse.ArgumentParser(description='PyTorch Jazz Language Model')
@@ -87,7 +88,8 @@ def generate_from_xml(args):
                                    help='sample using top-p (nucleus sampling). https://arxiv.org/pdf/1904.09751.pdf')
     generation_parser.add_argument('--verbose', action='store_true', default=0,
                                    help='verbose option for xml to mp3 process')
-
+    generation_parser.add_argument('--pitch12', action='store_true', default=0,
+                                   help='squeeze to 12 pitches')
     args = parser.parse_args(args)
     args.cuda = not args.no_cuda
     if args.temperature < 1e-3:
@@ -121,7 +123,7 @@ def generate_from_xml(args):
         if args.song == 'giant':
             kwargs['mem_len'] = 54
         with open(os.path.join(args.model_dir, args.checkpoint), 'rb') as f:
-            model = MemTransformerLM(**kwargs)
+            model = MemTransformerLM(**kwargs, pitch12=args.pitch12)
             model_path = os.path.join(args.model_dir, args.checkpoint)
             if args.cuda:
                 model.load_state_dict(torch.load(model_path))
@@ -150,7 +152,7 @@ def generate_from_xml(args):
                                top_p=args.top_p,
                                temperature=args.temperature,
                                score_model=args.score_model, threshold=args.threshold,
-                               ensemble=True, song=args.song, no_head=args.remove_head_from_mp3)
+                               ensemble=True, song=args.song, no_head=args.remove_head_from_mp3, pitch12=args.pitch12)
 
     print("initialized generator")
     generator.init_stream(args.xml)
@@ -182,12 +184,12 @@ def generate_from_xml(args):
     #notes_swing = notes_to_swing_notes(notes[:, 0, :])
 
     stream = notes_to_stream(notes[:, 0, :], generator.stream, generator.chords, generator.head_len,
-                             args.remove_head_from_mp3, head_early_start=generator.early_start)
+                             args.remove_head_from_mp3, head_early_start=generator.early_start, pitch12=args.pitch12)
     #stream_swing = notes_to_stream(notes_swing, generator.stream, generator.chords, generator.head_len,
                                    #args.remove_head_from_mp3, head_early_start=generator.early_start)
     if not args.remove_head_from_mp3:
         stream_no_head = notes_to_stream(notes[:, 0, :], generator.stream, generator.chords, generator.head_len,
-                                         remove_head=True, head_early_start=generator.early_start)
+                                         remove_head=True, head_early_start=generator.early_start, pitch12=args.pitch12)
         # Create output files:
         xml_converter = m21.converter.subConverters.ConverterMusicXML()
         try:

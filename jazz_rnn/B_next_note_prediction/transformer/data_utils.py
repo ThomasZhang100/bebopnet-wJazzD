@@ -4,19 +4,25 @@ import pickle
 
 import numpy as np
 import torch
-from jazz_rnn.A_data_prep.gather_data_from_xml import REST_SYMBOL, EOS_SYMBOL
+from jazz_rnn.A_data_prep.gather_data_from_xml import REST_SYMBOL, EOS_SYMBOL, REST_SYMBOL12, EOS_SYMBOL12
 
 TRANSPOSE_PITCHES = np.arange(-5, 7)
 
 
-def transpose_data_torch(p, data):
+def transpose_data_torch(p, data, pitch12=False):
     shape = data.shape
     tranposed_data = copy.deepcopy(data)
-
+    
     tranposed_data = tranposed_data.view(-1, tranposed_data.shape[-1])
-    not_rest_or_eos_mask = (tranposed_data[:, 0] != REST_SYMBOL) & (tranposed_data[:, 0] != EOS_SYMBOL)
-    tranposed_data[not_rest_or_eos_mask, 0] = (tranposed_data[not_rest_or_eos_mask, 0] + p) % 12
-    tranposed_data[:, 3] = (tranposed_data[:, 3] + p) % 12 #added %12 for pitch12
+
+    if pitch12:
+        not_rest_or_eos_mask = (tranposed_data[:, 0] != REST_SYMBOL12) & (tranposed_data[:, 0] != EOS_SYMBOL12)
+        tranposed_data[not_rest_or_eos_mask, 0] = (tranposed_data[not_rest_or_eos_mask, 0] + p) % 12  #added %12 for pitch12
+        tranposed_data[:, 3] = (tranposed_data[:, 3] + p) % 12
+    else:
+        not_rest_or_eos_mask = (tranposed_data[:, 0] != REST_SYMBOL) & (tranposed_data[:, 0] != EOS_SYMBOL)
+        tranposed_data[not_rest_or_eos_mask, 0] = tranposed_data[not_rest_or_eos_mask, 0] + p
+        tranposed_data[:, 3] = (tranposed_data[:, 3] + p) % 12 
     tranposed_data[:, 4:16] = torch.roll(tranposed_data[:, 4:16], shifts=int(p), dims=1)
     tranposed_data[:, 17:29] = torch.roll(tranposed_data[:, 17:29], shifts=int(p), dims=1)
     tranposed_data = tranposed_data.view(*shape)
@@ -24,7 +30,7 @@ def transpose_data_torch(p, data):
 
 
 class LMOrderedIterator(object):
-    def __init__(self, data, bsz, bptt, device='cpu', ext_len=None):
+    def __init__(self, data, bsz, bptt, device='cpu', ext_len=None, pitch12=False):
         """
             data -- LongTensor -- the LongTensor is strictly ordered
         """
@@ -34,6 +40,8 @@ class LMOrderedIterator(object):
         self.ext_len = ext_len if ext_len is not None else 0
 
         self.device = device
+
+        self.pitch12 = pitch12
 
         # Work out how cleanly we can divide the dataset into bsz parts.
         self.n_step = data.size(0) // bsz
@@ -61,7 +69,10 @@ class LMOrderedIterator(object):
 
         # The note before EOS should not take the eos chord, rather should maintain its own.
         # Likewise, the EOS note, should maintain his zero vector for a chord
-        eos_mask = self.data[beg_idx:end_idx + 1, :, 0] == EOS_SYMBOL
+        if self.pitch12:
+            eos_mask = self.data[beg_idx:end_idx + 1, :, 0] == EOS_SYMBOL12
+        else: 
+            eos_mask = self.data[beg_idx:end_idx + 1, :, 0] == EOS_SYMBOL
         eos_mask_copy = eos_mask.clone()
         eos_mask[:-1] = eos_mask_copy[:-1] + eos_mask[1:]
         eos_mask = eos_mask[:-1]
@@ -91,14 +102,27 @@ class LMOrderedIterator(object):
         return self.get_fixlen_iter()
 
 
-class JazzCorpus:
-    def __init__(self, pkl_path, transpose=True): #pkl_path is ./results/dataset_pkls/
-        with open(os.path.join(pkl_path, 'converter_and_duration.pkl'), 'rb') as input_conv:
+class JazzCorpus: #where pkl path is decided 
+    def __init__(self, pkl_path, pitch12=False, transpose=True): #pkl_path is ./results/dataset_pkls/
+
+        self.pitch12 = pitch12
+
+        if pitch12:
+            convertpath = 'converter_and_duration12.pkl'
+            trainpath = 'train12.pkl'
+            valpath = 'val12.pkl'
+        else:
+            convertpath = 'converter_and_duration.pkl'
+            trainpath = 'train.pkl'
+            valpath = 'val.pkl'
+
+
+        with open(os.path.join(pkl_path, convertpath), 'rb') as input_conv:
             self.converter = pickle.load(input_conv)
 
-        with open(os.path.join(pkl_path, 'train.pkl'), 'rb') as input_train:
+        with open(os.path.join(pkl_path, trainpath), 'rb') as input_train:
             train_data = pickle.load(input_train)
-        with open(os.path.join(pkl_path, 'val.pkl'), 'rb') as input_val:
+        with open(os.path.join(pkl_path, valpath), 'rb') as input_val:
             val_data = pickle.load(input_val)
 
         self.transpose = transpose #transpose is true, so we will transpose
@@ -116,16 +140,16 @@ class JazzCorpus:
         train_data_transposed = []
         val_data_transposed = []
         for i in range(-5, 7):
-            train_data_transposed.append(transpose_data_torch(i, self.train_data))
-            val_data_transposed.append(transpose_data_torch(i, self.val_data))
+            train_data_transposed.append(transpose_data_torch(i, self.train_data, pitch12=pitch12))
+            val_data_transposed.append(transpose_data_torch(i, self.val_data, pitch12=pitch12))
         self.train_data = torch.cat(train_data_transposed)
         self.val_data = torch.cat(val_data_transposed)
 
     def get_iterator(self, split, *args, **kwargs):
         if split == 'train':
-            data_iter = LMOrderedIterator(self.train_data, *args, **kwargs)
+            data_iter = LMOrderedIterator(self.train_data, *args, **kwargs, pitch12=self.pitch12)
         elif split == 'val':
-            data_iter = LMOrderedIterator(self.val_data, *args, **kwargs)
+            data_iter = LMOrderedIterator(self.val_data, *args, **kwargs, pitch12=self.pitch12)
         else:
             raise ValueError('split must be train|val')
 

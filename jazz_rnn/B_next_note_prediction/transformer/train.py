@@ -1,5 +1,5 @@
 # coding: utf-8
-#python jazz_rnn/B_next_note_prediction/transformer/train.py --config "./configs/train_model.yml" 
+#python jazz_rnn/B_next_note_prediction/transformer/train.py --config "./configs/train_model.yml" --pitch12
 #python jazz_rnn/B_next_note_prediction/transformer/train.py --config "./configs/train_model.yml" --restart --restart_dir "results/training_results/transformer/model_20230819-202857"
 import configargparse
 import time
@@ -23,7 +23,7 @@ from jazz_rnn.B_next_note_prediction.transformer.data_utils import JazzCorpus
 from jazz_rnn.B_next_note_prediction.transformer.mem_transformer import MemTransformerLM
 from jazz_rnn.B_next_note_prediction.transformer.utils.exp_utils import create_exp_dir
 from jazz_rnn.utilspy.meters import AverageMeter
-from jazz_rnn.A_data_prep.gather_data_from_xml import EOS_SYMBOL
+from jazz_rnn.A_data_prep.gather_data_from_xml import EOS_SYMBOL, EOS_SYMBOL12
 
 def init_weight(weight, args):
     if args.init == 'uniform':
@@ -240,6 +240,9 @@ class Trainer: #2
                                        help='use the same pos embeddings after clamp_len')
         experiment_parser.add_argument('--max_eval_steps', type=int, default=-1,
                                        help='max eval steps')
+        #added arg for pitch12:
+        experiment_parser.add_argument('--pitch12', action='store_true',
+                                       help='train on pitches squeezed into one octave')
 
         self.update_args_defaults(parser)
 
@@ -262,7 +265,7 @@ class Trainer: #2
         pass
 
     def load_data(self): #3
-        self.corpus = JazzCorpus(self.args.data_pkl, transpose=True) #< goes to data_util
+        self.corpus = JazzCorpus(self.args.data_pkl, pitch12=self.args.pitch12, transpose=True) #< goes to data_util
 
         # eval_batch_size = 10
         #get_batch() in the LMOrderedIterator is where the chord shifting happens
@@ -273,17 +276,19 @@ class Trainer: #2
 
     def build_model(self):
         args = self.args
+        pitchSize = EOS_SYMBOL12+1 if args.pitch12 else EOS_SYMBOL+1
+
         model_kwargs = {'n_layer': args.n_layer, 'n_head': args.n_head, 'd_model': args.d_model,
                         'd_head': args.d_head, 'd_inner': args.d_inner, 'dropout': args.dropout,
                         'dropatt': args.dropatt, 'tie_weight': args.tied, 'd_embed': args.d_embed,
                         'pre_lnorm': args.pre_lnorm,
                         'tgt_len': args.tgt_len , 'ext_len': args.ext_len, 'mem_len': args.mem_len, #64,0,64 respectively in args.json
                         'clamp_len': args.clamp_len, #-1
-                        'pitch_sizes': (EOS_SYMBOL+1, args.pitch_emsize), #including eos 
+                        'pitch_sizes': (pitchSize, args.pitch_emsize), #including eos 
                         'duration_sizes': (self.corpus.converter.max_durations(), args.dur_emsize),
                         'offset_sizes': (48, args.offset_emsize),
                         'converter': self.corpus.converter,
-                        'chord_bias': args.chord_bias,
+                        'chord_bias': args.chord_bias
                         }
 
         #above arguments are used instead of args.json
@@ -295,14 +300,14 @@ class Trainer: #2
             for k, v in saved_model_kwargs.items():
                 model_kwargs[k] = v
 
-            self.model = self.model_class(**model_kwargs)
+            self.model = self.model_class(**model_kwargs, pitch12=args.pitch12)
             with open(os.path.join(args.restart_dir, 'model.pt'), 'rb') as f:
                 self.model.load_state_dict(torch.load(f), strict=False)
             update_dropout_partial = partial(update_dropout, args=self.args)
             self.model.apply(update_dropout_partial)
             self.model.apply(update_dropout_partial)
         else:
-            self.model = self.model_class(**model_kwargs) #initializes model object into self.model
+            self.model = self.model_class(**model_kwargs, pitch12=args.pitch12) #initializes model object into self.model
             weights_init_partial = partial(weights_init, args=self.args)
             self.model.apply(weights_init_partial)
             self.model.encode_pitch.apply(
@@ -316,7 +321,10 @@ class Trainer: #2
         with open(os.path.join(args.work_dir, 'args.json'), 'w') as f:
             del model_kwargs['converter']
             json.dump(model_kwargs, f)
-        shutil.copy(os.path.join(args.data_pkl, 'converter_and_duration.pkl'),
+        
+        converterpath = 'converter_and_duration12.pkl' if args.pitch12 else 'converter_and_duration.pkl'
+
+        shutil.copy(os.path.join(args.data_pkl, converterpath),
                     os.path.join(args.work_dir, 'converter_and_duration.pkl'))
         shutil.copy(os.path.join(args.config),
                     os.path.join(args.work_dir, os.path.basename(args.config)))

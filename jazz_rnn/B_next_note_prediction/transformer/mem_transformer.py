@@ -7,10 +7,8 @@ import torch.nn.functional as F
 sys.path.append('utils')
 from jazz_rnn.utilspy.meters import accuracy
 from jazz_rnn.utils.music.vectorXmlConverter import input_2_groups
-from jazz_rnn.A_data_prep.gather_data_from_xml import EOS_SYMBOL #EOS SYMBOL MUST E CHANGED 
-from jazz_rnn.A_data_prep.durationpitch import minPitch
-
-OFFSET_TO_5OCT = 60 - minPitch #old: 72 - 36 ; subtracting minPitch to match pitch normalization, 60 is the C of the most common octave (in raw midi)
+from jazz_rnn.A_data_prep.gather_data_from_xml import EOS_SYMBOL, EOS_SYMBOL12 #EOS SYMBOL MUST E CHANGED 
+from jazz_rnn.A_data_prep.durationpitch import minPitch, minPitch12
 
 
 class PositionalEmbedding(nn.Module):
@@ -395,10 +393,13 @@ class MemTransformerLM(nn.Module):
                  dropout, dropatt, tie_weight=True, d_embed=None, pre_lnorm=False,
                  tgt_len=None, ext_len=None, mem_len=None,
                  clamp_len=-1, pitch_sizes=None, duration_sizes=None, offset_sizes=None,
-                 converter=None, chord_bias=False):
+                 converter=None, chord_bias=False, pitch12=False):
         super(MemTransformerLM, self).__init__()
         self.converter = converter
         self.chord_bias = chord_bias
+
+        #added pitch12 argument
+        self.pitch12 = pitch12
 
         d_embed = d_model if d_embed is None else d_embed
         self.d_embed = d_embed
@@ -533,7 +534,8 @@ class MemTransformerLM(nn.Module):
         if self.offset:
             word_emb = torch.cat((word_emb, offset_emb), 2)
 
-        eos_mask = pitch == EOS_SYMBOL
+        
+        eos_mask = pitch == EOS_SYMBOL12 if self.pitch12 else pitch == EOS_SYMBOL
         chord_emb = self.get_chord_pitch_emb(bsz, qlen, chord_pitches, eos_mask)
         if not self.chord_bias:
             word_emb = torch.cat((word_emb, chord_emb), 2)
@@ -621,6 +623,7 @@ class MemTransformerLM(nn.Module):
         chord_pitches = chord_pitches.view(-1, 13)
         #print("chord_pitches:")
         #print(chord_pitches)
+        OFFSET_TO_5OCT = 60 - minPitch12 if self.pitch12 else 60 - minPitch #old: 72 - 36 ; subtracting minPitch to match pitch normalization, 60 is the C of the most common octave (in raw midi)
         chord_pitch_idxs_no_eos = chord_pitches.nonzero()[:, 1] + OFFSET_TO_5OCT # to most common octave 
         chord_pitch_idxs = torch.zeros(shape[0] * shape[1], 4, device=chord_pitches.device, dtype=chord_pitches.dtype)
         try:

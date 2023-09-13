@@ -15,7 +15,7 @@ PITCH_IDX_IN_NOTE, DURATION_IDX_IN_NOTE, TIE_IDX_IN_NOTE, \
 MEASURE_IDX_IN_NOTE, LOG_PROB_IDX_IN_NOTE = 0, 1, 2, 3, 4
 
 
-def notes_to_stream(notes, stream, chords, head_len, remove_head=False, head_early_start=False):
+def notes_to_stream(notes, stream, chords, head_len, remove_head=False, head_early_start=False, pitch12=False):
     m = m21.stream.Measure()
     if remove_head:
         m.append(stream.flat.getElementsByClass(m21.tempo.MetronomeMark)[0])
@@ -38,7 +38,8 @@ def notes_to_stream(notes, stream, chords, head_len, remove_head=False, head_ear
             notes[note_num-1][DURATION_IDX_IN_NOTE]=Fraction(int(n[DURATION_IDX_IN_NOTE].numerator), int(n[DURATION_IDX_IN_NOTE].denominator))
         #print("note:", n)
         m.append(
-            create_note(n[PITCH_IDX_IN_NOTE], n[DURATION_IDX_IN_NOTE], tie_idx_2_value(n[TIE_IDX_IN_NOTE])))
+            create_note(n[PITCH_IDX_IN_NOTE], n[DURATION_IDX_IN_NOTE], tie_idx_2_value(n[TIE_IDX_IN_NOTE]),pitch12=pitch12)
+            )
         try:
             measure_dur += n[DURATION_IDX_IN_NOTE]
         except ZeroDivisionError:

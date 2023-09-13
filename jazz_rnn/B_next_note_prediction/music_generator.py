@@ -12,7 +12,7 @@ from jazz_rnn.A_data_prep.gather_data_from_xml import extract_vectors, extract_c
 from jazz_rnn.B_next_note_prediction.generation_utils import RES_LENGTH, early_start_song_dict
 from jazz_rnn.utils.music.vectorXmlConverter import chord_2_vec, NOTE_VECTOR_SIZE, chord_2_vec_on_tensor, tie_2_value
 from jazz_rnn.utilspy.meters import AverageMeter
-from jazz_rnn.A_data_prep.durationpitch import minPitch, EOS_SYMBOL
+from jazz_rnn.A_data_prep.durationpitch import minPitch, minPitch12, EOS_SYMBOL, EOS_SYMBOL12
 
 PITCH_IDX_IN_NOTE, DURATION_IDX_IN_NOTE, TIE_IDX_IN_NOTE, \
 MEASURE_IDX_IN_NOTE, LOG_PROB_IDX_IN_NOTE = 0, 1, 2, 3, 4
@@ -38,8 +38,9 @@ class MusicGenerator:
                  temperature,
                  score_model='', threshold=None,
                  ensemble=False,
-                 song='', no_head=False):
+                 song='', no_head=False, pitch12=False):
 
+        self.pitch12=pitch12
         self.filename = None
         self.song = song
         self.model = model
@@ -152,7 +153,7 @@ class MusicGenerator:
 
     def insert_starting_notes(self, xml_file):
         """insert notes to generator for the generator to continue"""
-        data = extract_vectors(song=xml_file, ri=False, song_labels_dict={}, converter=self.converter, in48whole=True)
+        data = extract_vectors(song=xml_file, ri=False, song_labels_dict={}, converter=self.converter, in48whole=True, pitch12=self.pitch12)
         print("extracted vectors")
         data = np.array(data)
         data = torch.as_tensor(data, device=self.device)
@@ -163,7 +164,9 @@ class MusicGenerator:
         print("data:")
         print(data)
 
-        if (data[-1, :, 0] == EOS_SYMBOL).all():
+        eossymb = EOS_SYMBOL12 if self.pitch12 else EOS_SYMBOL
+
+        if (data[-1, :, 0] == eossymb).all():
             data = data[:-1]
         print("check1")
 
@@ -178,7 +181,7 @@ class MusicGenerator:
         
         print("check2")
         first_chord = self.chords[0][0]
-        root, scale_pitches, chord_pitches, chord_idx = chord_2_vec(first_chord)
+        root, scale_pitches, chord_pitches, chord_idx = chord_2_vec(first_chord, pitch12=self.pitch12)
         self.initial_last_note_net = data.new(
             (list(data[-1, 0, :3]) + [root] + scale_pitches + chord_pitches + [chord_idx])).expand(1, self.batch_size,
                                                                                                    data.shape[-1])
@@ -389,7 +392,7 @@ class MusicGenerator:
                       self.chords[(measure_idx + 1) % self.head_len][0] for ind, c in
                       enumerate(at_second_half_of_bar)] #gets chord of next note based on if the note crosses the end of the measure or not
         root, scale_pitches, chord_pitches, chord_idx = \
-            chord_2_vec_on_tensor(next_chord, device=self.device) #gets chord info
+            chord_2_vec_on_tensor(next_chord, device=self.device, pitch12=self.pitch12) #gets chord info
         new_notes_for_net = torch.cat((new_pitch, new_dur_net,
                                        new_offset.unsqueeze(1),
                                        root.unsqueeze(1), scale_pitches,
@@ -448,9 +451,17 @@ class MusicGenerator:
 
         for idx in chord_idx:
             #print("idx:",idx)
-            idx[-1]=(idx[-1]-minPitch)%12
+            if self.pitch12:
+                idx[-1]=(idx[-1]-minPitch12)%12
+                numoctaves = 1
+                pitchboost = 0.5
+            else:
+                numoctaves = 5
+                idx[-1]=(idx[-1]-minPitch)%12
+                pitchboost = 2.5
+
             #print("idxupdated:", idx)
-            for i in range(1): #used to be 5 
+            for i in range(numoctaves): #used to be 5 
                 #new_elem = torch.zeros((1,len(idx)),device=self.device)
                 #print("new_elem:",new_elem)
                 #print("new_elem[0][:-1]:",new_elem[0][:-1])
@@ -459,7 +470,7 @@ class MusicGenerator:
                 #new_elem[0][-1]=idx[-1]+12*i
                 #print("new_elem:", new_elem)
                 #new_idx=torch.cat((new_idx,new_elem))
-                output_pitch[idx[0],idx[1],idx[-1]+12*i]+=0
+                output_pitch[idx[0],idx[1],idx[-1]+12*i]+=pitchboost
         
         for idx in range(len(pitches)):
             output_pitch[0][idx][pitches[idx]]-=2
@@ -489,8 +500,9 @@ class MusicGenerator:
 
         # remove probs for notes the sax can't produce
         #print("output_pitch:", output_pitch)
-        #output_pitch[:, :16] = -1e9 #removing the low notes *FIXED* ; used to be :47 (subtracted minPitch)
-        #output_pitch[:, 52:-2] = -1e9 #removing the high notes  ; used to be 83:-2
+        if not self.pitch12:
+            output_pitch[:, :16] = -1e9 #removing the low notes *FIXED* ; used to be :47 (subtracted minPitch)
+            output_pitch[:, 52:-2] = -1e9 #removing the high notes  ; used to be 83:-2
         output_pitch[:, -1] = -1e9  # EOS
         if self.score_model == 'reward': #default is no 
             output_duration[:, self.score_inference.reward_unsupported_durs] = -1e9

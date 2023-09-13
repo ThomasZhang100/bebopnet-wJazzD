@@ -4,7 +4,7 @@ from bidict import bidict
 import numpy as np
 import torch
 import music21 as m21
-from jazz_rnn.A_data_prep.durationpitch import minPitch, REST_SYMBOL
+from jazz_rnn.A_data_prep.durationpitch import minPitch, minPitch12, REST_SYMBOL, REST_SYMBOL12
 
 class VectorXmlConverter:
     def __init__(self, durations):
@@ -39,6 +39,7 @@ class VectorXmlConverter:
 
 
 REST_IDX = REST_SYMBOL #128
+REST_IDX12 = REST_SYMBOL12 #128
 N_NOTES = 13
 N_NOTES_NO_REST = N_NOTES - 1
 N_PITCHES = 129
@@ -47,14 +48,21 @@ N_PITCHES_NO_REST = 128
 NOTE_VECTOR_SIZE = 31
 
 
-def create_note(pitch_idx, duration, tie=None):
-
-    if pitch_idx == REST_SYMBOL: #REST_IDX
+def create_note(pitch_idx, duration, tie=None, pitch12=False):
+    print("pitch12:", pitch12)
+    if pitch12:
+        restsymb=REST_SYMBOL12
+        minp = minPitch12
+    else:
+        restsymb=REST_SYMBOL
+        minp = minPitch
+    if pitch_idx == restsymb: #REST_IDX
         n = m21.note.Rest(quarterLength=duration)
         assert (n is not None)
         return n
     else:
-        n = m21.note.Note(midi=pitch_idx+minPitch, quarterLength=duration) #+minPitch was added
+        n = m21.note.Note(midi=pitch_idx+minp, quarterLength=duration) #+minPitch was added
+        #print("pitch_idx+minp:",pitch_idx+minp)
         assert (n is not None)
         if tie:
             t = m21.tie.Tie(tie)
@@ -105,7 +113,7 @@ def ensure_4_notes(chord):
 
 
 @lru_cache(maxsize=256)
-def chord_2_vec(input_chord, relative_pitch=None, song=''):
+def chord_2_vec(input_chord, relative_pitch=None, song='', pitch12=False):
     scale_notes = np.zeros(N_NOTES, dtype=int)
     chord_notes = np.zeros(N_NOTES, dtype=int)
     if not input_chord:
@@ -136,7 +144,9 @@ def chord_2_vec(input_chord, relative_pitch=None, song=''):
         if (chord.chordKind == 'suspended-fourth' or chord.chordKind == 'suspended-fourth-seventh') and len(
                 chord_pitch_indices) != 4:  # Fix m21 bug with 'suspended-fourth-seventh' chords
             chord_pitch_indices = [(root + p) % N_NOTES_NO_REST for p in [0, 5, 7, 10]]
-        if relative_pitch is not None and relative_pitch != REST_IDX:
+
+        restsymb = REST_IDX12 if pitch12 else REST_IDX
+        if relative_pitch is not None and relative_pitch != restsymb:
             chord_pitch_indices = [note_char_2_ind[p.simplifyEnharmonic(mostCommon=True).name] - relative_pitch
                                    for p in chord.pitches]
             rank = relative_pitch % N_NOTES_NO_REST
@@ -149,10 +159,10 @@ def chord_2_vec(input_chord, relative_pitch=None, song=''):
     return root, scale_notes.tolist(), chord_notes.tolist(), chord_idx
 
 
-def chord_2_vec_on_tensor(chords, device=None):
+def chord_2_vec_on_tensor(chords, device=None, pitch12=False):
     results = []
     for c in chords:
-        results.append(chord_2_vec(c))
+        results.append(chord_2_vec(c,pitch12=pitch12))
 
     list_to_tensor = lambda x: torch.tensor(np.array(x), dtype=torch.long, device=device)
     root_list, scale_pitches_list, chord_pitches_list, chord_idx_list = map(list_to_tensor, zip(*results))

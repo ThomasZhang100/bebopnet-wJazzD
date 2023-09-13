@@ -13,19 +13,20 @@ from jazz_rnn.utils.music.vectorXmlConverter import *
 
 '''
 old non-pitch12: 
+'''
 
 maxPitch = 97 + 7 #104
 minPitch = 36 - 5 #31 ; so lowest note 0==31==G 
 REST_SYMBOL = maxPitch+1-minPitch #74
 EOS_SYMBOL = REST_SYMBOL+1 #75
 EOS_VECTOR = [EOS_SYMBOL] + [0] * 30
-'''
 
-maxPitch = 71 
-minPitch = 60 #so lowest note 0==60==C
-REST_SYMBOL = maxPitch+1-minPitch #12
-EOS_SYMBOL = REST_SYMBOL+1 #13
-EOS_VECTOR = [EOS_SYMBOL] + [0] * 30
+
+maxPitch12 = 71 
+minPitch12 = 60 #so lowest note 0==60==C
+REST_SYMBOL12 = maxPitch12+1-minPitch12 #12
+EOS_SYMBOL12 = REST_SYMBOL12+1 #13
+EOS_VECTOR12 = [EOS_SYMBOL12] + [0] * 30
 
 #MUST FIX TRANSPOSITION SO THAT IT DOESNT OVERFLOW maxPitch and minPitch 
 
@@ -174,7 +175,7 @@ def main2pitch12():
     for i in range(len(songData)):
         for j in range(len(songData[i])):
             if songData[i][j][0]==99.0:
-                songData[i][j][0]=REST_SYMBOL
+                songData[i][j][0]=REST_SYMBOL12
             else:
                 songData[i][j][0]=songData[i][j][0]%12
             
@@ -205,7 +206,7 @@ def main2pitch12():
                 chordvec[idx]=1
             songData[i][j]=songData[i][j][:3]+[0]*14+chordvec+[songData[i][j][7]]
             
-        songData[i].append(EOS_VECTOR)
+        songData[i].append(EOS_VECTOR12)
         if i==0:
             print(songData[i])
         
@@ -221,7 +222,7 @@ def main2pitch12():
     test_data = []
     for i in range(len(songData)):
         for j in range(len(songData[i])):
-            if songData[i][j][0] != EOS_SYMBOL:
+            if songData[i][j][0] != EOS_SYMBOL12:
                 songData[i][j][1]=converter.dur_2_ind(songData[i][j][1])
         if validSongs[i] in train_songs:
             train_data.append(songData[i])
@@ -243,19 +244,19 @@ def main2pitch12():
     file.close()
     '''
     
-    with open(os.path.join(outdir, 'converter_and_duration.pkl'), 'wb') as fp:
+    with open(os.path.join(outdir, 'converter_and_duration12.pkl'), 'wb') as fp:
         pickle.dump(converter, fp)
         pickle.dump(uniquedurs, fp)
-    with open(os.path.join(outdir, 'train.pkl'), 'wb') as fp:
+    with open(os.path.join(outdir, 'train12.pkl'), 'wb') as fp:
         pickle.dump(train_data, fp)
-    with open(os.path.join(outdir, 'val.pkl'), 'wb') as fp:
+    with open(os.path.join(outdir, 'val12.pkl'), 'wb') as fp:
         pickle.dump(test_data, fp)
     
     #plug all the holes in train.py 
     
 
 if __name__ == "__main__":
-    main2pitch12()
+    main()
 
 '''
 [(1, 1320), (2, 6901), (3, 18973), (4, 18075), (5, 20787), (6, 22583), (7, 14923), (8, 7367), (9, 3442), (10, 1935), (11, 1629), (12, 1754), (13, 1135), (14, 888), (15, 837), (16, 747), (17, 743), (18, 725), (19, 634), (20, 520), (21, 420), (22, 402), (23, 404), (24, 398), (25, 330), (26, 265), (27, 222), (28, 190), (29, 193), (30, 196), (31, 200), (32, 167), (33, 142), (34, 144), (35, 147), (36, 146), (37, 120), (38, 114), (39, 132), (40, 87), (41, 86), (42, 100), (43, 84), (44, 85), (45, 77), (46, 78), (47, 52), (48, 69), (49, 65), (50, 56), (51, 53), (52, 38), (53, 40), (54, 27), (55, 31), (56, 26), (57, 24), (58, 23), (59, 27), (60, 36), (61, 18), (62, 25), (63, 10), (64, 18), (65, 13), (66, 11), (67, 10), (68, 17), (69, 10), (70, 12), (71, 9), (72, 4), (73, 16), (74, 7), (75, 3), (76, 6), (77, 3), (78, 3), (79, 4), (80, 2), (81, 3), (83, 1), (84, 3), (87, 1), (88, 2), (90, 2), (91, 2), (92, 1)]
