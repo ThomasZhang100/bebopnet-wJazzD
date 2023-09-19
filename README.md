@@ -1,4 +1,60 @@
-# BebopNet
+# BebopNet - WJazzD 
+
+This repository contains an implementation of the BebopNet jazz improvisation model (created by Hakimi et al. (2020)), but which I retrained using the larger WJazzD SQLite database. 
+
+To run the following commands, set `bebopnet-code` as the root (set the PYTHONPATH environmental variable to the bebopnet-code directory). 
+
+To generate music using my pretrained (WJazzD) model, run: 
+```
+python jazz_rnn/B_next_note_prediction/generate_from_xml.py --model_dir "results/training_results/transformer/model_20230821-094938" --checkpoint 'model.pt' 
+```
+
+If you wish to generate using the model trained on pitches normalized to one octave, run: 
+```
+python jazz_rnn/B_next_note_prediction/generate_from_xml.py --model_dir "results/training_results/transformer/model_20230827-190039" --checkpoint 'model.pt' --pitch12
+```
+
+To pick the song to generate an improvisation over, add the argument ( --song '<song>')
+
+'fly': Fly Me to the Moon
+'giant': Giant Steps
+'blue': Blue 
+'it': It Don't Mean a Thing
+'well': Well You Needn't
+'over': Over the Rainbow
+'just': Just Friends
+'there': There Will Never be Another You 
+'all': All the Things You Are
+'moose': Moose The Mooche
+'summertime': Summertime
+'rhythm': I've Got Rhythm
+'billie': Billie's Bounce
+'monk': Blue Monk
+'cheese': Cheesecake
+'black': Black Orpheus
+'green': On Green Dolphin Street
+'confirmation': Confirmation
+'mylove': My Love
+'four': Four Brothers
+'how': How High the Moon
+'chega': Chega de Saudade
+'recordame': Recorda Me
+'foggy': A Foggy Day
+
+Generated mp3 and MIDI files can be found in bebopnet-code/results/samples. 
+
+
+
+To retrain the model, run: 
+```
+python jazz_rnn/B_next_note_prediction/transformer/train.py --config "./configs/train_model.yml" 
+```
+
+Include the argument (--pitch12) if you would like to train the model on data normalized to one octave. 
+
+
+
+# BebopNet (made by Hakimi et al. (2020))
 
 This repository contains PyTorch implementation and a trained model for our paper:
 

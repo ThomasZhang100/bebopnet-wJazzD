@@ -327,7 +327,7 @@ def remove_consecutive_rest_vars(data_dict, converter, ri, no_eos=False):
 
 #need this
 def extract_vectors(song, ri, song_labels_dict, converter, no_eos=False, in48whole=False, pitch12=False):
-    print("pitch12:", pitch12)
+    #print("pitch12:", pitch12)
     data = []
     if ri:
         song_key = os.path.basename(song).replace('_with_chords.xml', '_0')

@@ -454,7 +454,7 @@ class MusicGenerator:
             if self.pitch12:
                 idx[-1]=(idx[-1]-minPitch12)%12
                 numoctaves = 1
-                pitchboost = 0.5
+                pitchboost = 0.0
             else:
                 numoctaves = 5
                 idx[-1]=(idx[-1]-minPitch)%12
