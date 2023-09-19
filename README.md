@@ -16,30 +16,30 @@ python jazz_rnn/B_next_note_prediction/generate_from_xml.py --model_dir "results
 
 To pick the song to generate an improvisation over, add the argument ( --song '<song>')
 
-'fly': Fly Me to the Moon
-'giant': Giant Steps
-'blue': Blue 
-'it': It Don't Mean a Thing
-'well': Well You Needn't
-'over': Over the Rainbow
-'just': Just Friends
-'there': There Will Never be Another You 
-'all': All the Things You Are
-'moose': Moose The Mooche
-'summertime': Summertime
-'rhythm': I've Got Rhythm
-'billie': Billie's Bounce
-'monk': Blue Monk
-'cheese': Cheesecake
-'black': Black Orpheus
-'green': On Green Dolphin Street
-'confirmation': Confirmation
-'mylove': My Love
-'four': Four Brothers
-'how': How High the Moon
-'chega': Chega de Saudade
-'recordame': Recorda Me
-'foggy': A Foggy Day
+'fly': Fly Me to the Moon;
+'giant': Giant Steps;
+'blue': Blue ;
+'it': It Don't Mean a Thing;
+'well': Well You Needn't;
+'over': Over the Rainbow;
+'just': Just Friends;
+'there': There Will Never be Another You;
+'all': All the Things You Are;
+'moose': Moose The Mooche;
+'summertime': Summertime;
+'rhythm': I've Got Rhythm;
+'billie': Billie's Bounce;
+'monk': Blue Monk;
+'cheese': Cheesecake;
+'black': Black Orpheus;
+'green': On Green Dolphin Street;
+'confirmation': Confirmation;
+'mylove': My Love;
+'four': Four Brothers;
+'how': How High the Moon;
+'chega': Chega de Saudade;
+'recordame': Recorda Me;
+'foggy': A Foggy Day;
 
 Generated mp3 and MIDI files can be found in bebopnet-code/results/samples. 
 
